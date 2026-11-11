@@ -1,0 +1,2037 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<script>
+/* =====================================================================
+   EDIT THESE (placeholders). Nothing else in this file needs editing.
+   1) FIREBASE_CONFIG : Firebase console > Project settings > Your apps > Web app > Config
+   2) OWNER_EMAIL     : your Google account email, lowercase. Must match firestore.rules.
+   3) QUIZ_ID         : short lowercase slug, unique per quiz file (a-z, 0-9, hyphen, max 40)
+   4) QUIZ_TITLE      : name shown on the leaderboards
+   5) FIREBASE_SDK_VERSION : pinned Firebase web SDK version (leave as is)
+   ===================================================================== */
+const FIREBASE_CONFIG = {
+  apiKey: "PASTE_API_KEY",
+  authDomain: "PASTE_PROJECT_ID.firebaseapp.com",
+  projectId: "PASTE_PROJECT_ID",
+  storageBucket: "PASTE_PROJECT_ID.appspot.com",
+  messagingSenderId: "PASTE_SENDER_ID",
+  appId: "PASTE_APP_ID"
+};
+const OWNER_EMAIL = "kwesidankyi1@gmail.com";
+const QUIZ_ID = "pstr212-newton";
+const QUIZ_TITLE = "PSTR 212 Kinesiology: Newton's Laws of Motion";
+const FIREBASE_SDK_VERSION = "10.14.1";
+</script>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>PSTR 212 — Kinesiology: Newton's Laws · Exam Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --accent-1:#FF6B35;
+  --accent-2:#4FC3F7;
+  --accent-3:#FF3B57;
+  --warn:#FFB020;
+  --bg:#060A0F;
+  --text:#EAF1F8;
+  --muted:#8FA0B5;
+  --line:rgba(255,255,255,0.10);
+  --ok-bg:rgba(255,107,53,0.14);
+  --bad-bg:rgba(255,59,87,0.12);
+  --nav-bg:rgba(6,10,15,0.62);
+  --track:rgba(255,255,255,0.09);
+}
+html[data-theme="light"]{
+  --bg:#EDF1F6;--text:#0E1723;--muted:#54637A;--line:rgba(10,20,40,0.12);
+  --ok-bg:rgba(228,85,31,0.13);--bad-bg:rgba(211,37,63,0.11);
+  --accent-1:#E4551F;--accent-2:#0E7FB8;--accent-3:#D3253F;
+  --nav-bg:rgba(237,241,246,0.72);--track:rgba(10,20,40,0.10);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{scroll-behavior:smooth}
+body{
+  margin:0;background:var(--bg);color:var(--text);
+  font-family:'Space Grotesk',system-ui,-apple-system,sans-serif;
+  font-size:15px;line-height:1.55;overflow-x:hidden;min-height:100svh;
+  transition:background .35s,color .35s;
+}
+#bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:.45}
+h1,h2,h3,p{margin:0}
+button{font-family:inherit;color:inherit}
+
+/* ---------- SCREENS ---------- */
+.screen{display:none;position:relative;z-index:1;min-height:100svh}
+.screen.active{display:block}
+
+/* ---------- GLASS CARD SYSTEM ---------- */
+.card-wrap{
+  position:relative;width:100%;max-width:700px;margin:0 auto;
+  filter:drop-shadow(0 35px 70px rgba(0,0,0,0.4));
+}
+.glass-card{
+  position:relative;border-radius:26px;overflow:hidden;isolation:isolate;
+  background:rgba(255,255,255,0.04);
+  -webkit-backdrop-filter:blur(50px) saturate(180%) brightness(1.1);
+  backdrop-filter:blur(50px) saturate(180%) brightness(1.1);
+}
+html[data-theme="light"] .glass-card{background:rgba(255,255,255,0.55)}
+.glass-card::before{
+  content:"";position:absolute;inset:0;border-radius:inherit;padding:2.5px;pointer-events:none;z-index:4;
+  background:conic-gradient(from 200deg,
+    rgba(255,255,255,0) 0deg,rgba(255,255,255,0) 55deg,
+    rgba(255,255,255,0.95) 80deg,rgba(255,168,204,0.95) 95deg,
+    rgba(255,255,255,0.85) 113deg,rgba(255,255,255,0) 155deg,
+    rgba(255,255,255,0) 360deg);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;
+  mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  mask-composite:exclude;
+  mix-blend-mode:screen;
+}
+html[data-theme="light"] .glass-card::before{mix-blend-mode:normal;opacity:.75}
+.glass-card::after{
+  content:"";position:absolute;inset:2px;border-radius:24px;pointer-events:none;z-index:3;
+  box-shadow:inset 4px 4px 16px rgba(255,255,255,0.22),
+             inset -3px -3px 14px rgba(0,0,0,0.10),
+             inset 0 0 50px rgba(255,255,255,0.05);
+}
+html[data-theme="light"] .glass-card::after{
+  box-shadow:inset 4px 4px 16px rgba(255,255,255,0.85),
+             inset -3px -3px 14px rgba(10,20,40,0.07),
+             inset 0 0 50px rgba(255,255,255,0.4);
+}
+.sheen{position:absolute;inset:0;pointer-events:none;z-index:2;border-radius:inherit;mix-blend-mode:overlay;
+  background:linear-gradient(135deg,rgba(255,255,255,0.20),rgba(255,255,255,0) 58%)}
+.thickness{position:absolute;inset:0;pointer-events:none;z-index:2;border-radius:inherit;
+  box-shadow:inset -5px -5px 14px rgba(0,0,0,0.18)}
+.card-body{position:relative;z-index:5;padding:22px 20px;pointer-events:auto}
+
+/* ---------- START ---------- */
+#screenStart{position:relative;display:none;align-items:center;justify-content:center;
+  padding:26px 16px calc(26px + env(safe-area-inset-bottom))}
+#screenStart.active{display:flex}
+.hero-img{position:absolute;inset:0;z-index:-2;background-size:cover;background-position:center;
+  background-image:url('https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=1600&q=80')}
+.hero-fade{position:absolute;inset:0;z-index:-1;pointer-events:none;
+  background:linear-gradient(180deg,rgba(6,10,15,0.45) 0%,rgba(6,10,15,0.78) 48%,var(--bg) 100%)}
+html[data-theme="light"] .hero-fade{
+  background:linear-gradient(180deg,rgba(237,241,246,0.35) 0%,rgba(237,241,246,0.85) 50%,var(--bg) 100%)}
+.start-body{padding:30px 22px 26px}
+.course-code{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.22em;color:var(--accent-1);margin-bottom:12px}
+.sc-title{font-size:25px;line-height:1.22;font-weight:700;letter-spacing:-.02em;margin-bottom:10px}
+.sc-sub{font-size:13px;color:var(--muted);margin-bottom:22px}
+.meta-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:22px}
+.meta{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:rgba(255,255,255,0.02)}
+html[data-theme="light"] .meta{background:rgba(255,255,255,0.5)}
+.meta-v{display:block;font-family:'JetBrains Mono',monospace;font-size:17px;font-weight:700;color:var(--accent-2)}
+.meta-k{display:block;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:2px}
+.cta{
+  display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:54px;
+  border:0;border-radius:14px;cursor:pointer;touch-action:manipulation;position:relative;z-index:6;
+  background:linear-gradient(135deg,var(--accent-1),#FF8F5E);color:#0A0E13;
+  font-weight:700;font-size:15.5px;box-shadow:0 12px 30px rgba(255,107,53,0.32);
+  transition:transform .16s,box-shadow .16s;
+}
+.cta:active{transform:scale(.985)}
+.cta svg{width:18px;height:18px;pointer-events:none}
+.sc-note{font-size:11.5px;color:var(--muted);text-align:center;margin-top:14px;line-height:1.5}
+
+/* ---------- NAV ---------- */
+.nav{position:sticky;top:0;z-index:30;padding:10px 14px 9px;background:var(--nav-bg);
+  -webkit-backdrop-filter:blur(18px) saturate(160%);backdrop-filter:blur(18px) saturate(160%);
+  border-bottom:1px solid var(--line)}
+.nav-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px}
+.pill{display:inline-flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;
+  font-size:11.5px;font-weight:500;padding:6px 10px;border-radius:9px;
+  border:1px solid var(--line);background:rgba(255,255,255,0.03);color:var(--muted)}
+.pill svg{width:13px;height:13px;stroke:var(--accent-2)}
+.timer{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:16.5px;letter-spacing:.04em;transition:color .3s}
+.timer.warn{color:var(--warn)}
+.timer.danger{color:var(--accent-3);animation:pulse .9s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+.icon-btn{width:38px;height:38px;display:grid;place-items:center;border-radius:10px;cursor:pointer;
+  border:1px solid var(--line);background:rgba(255,255,255,0.03);touch-action:manipulation;transition:background .2s}
+.icon-btn svg{width:17px;height:17px;stroke:var(--accent-2);pointer-events:none}
+.icon-btn:active{background:rgba(255,255,255,0.09)}
+.timer-track{height:3px;border-radius:3px;background:var(--track);overflow:hidden}
+.timer-fill{height:100%;width:100%;background:var(--accent-1);border-radius:3px;transition:width .25s linear,background .3s}
+.timer-fill.warn{background:var(--warn)}
+.timer-fill.danger{background:var(--accent-3)}
+.nav-bottom{display:flex;align-items:center;gap:10px;margin-top:9px}
+.qcount{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.07em;color:var(--muted);white-space:nowrap}
+.qtrack{flex:1;height:3px;border-radius:3px;background:var(--track);overflow:hidden}
+.qfill{height:100%;width:0;background:var(--accent-2);border-radius:3px;transition:width .35s ease}
+
+/* ---------- QUESTION ---------- */
+#qArea{padding:18px 14px calc(34px + env(safe-area-inset-bottom))}
+.qhead{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:15px}
+.badge{font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.14em;padding:4px 8px;border-radius:6px;
+  background:rgba(255,107,53,.14);color:var(--accent-1);border:1px solid rgba(255,107,53,.30)}
+.topic{font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.07em;padding:4px 8px;border-radius:6px;
+  background:rgba(79,195,247,.12);color:var(--accent-2);border:1px solid rgba(79,195,247,.28)}
+.qtext{font-size:16px;line-height:1.5;font-weight:500;margin-bottom:6px}
+.qnum{font-family:'JetBrains Mono',monospace;color:var(--accent-1);font-weight:700;margin-right:5px}
+.opts{margin-top:12px}
+.opt{
+  display:flex;align-items:flex-start;gap:11px;width:100%;text-align:left;min-height:52px;
+  padding:13px 14px;margin-top:9px;border-radius:14px;cursor:pointer;touch-action:manipulation;
+  font-size:14.5px;line-height:1.45;background:rgba(255,255,255,0.03);border:1px solid var(--line);
+  transition:border-color .2s,background .2s,transform .12s,box-shadow .25s;
+}
+html[data-theme="light"] .opt{background:rgba(255,255,255,0.6)}
+.opt:active{transform:scale(.994)}
+.opt .ltr{flex:0 0 26px;height:26px;border-radius:8px;display:grid;place-items:center;
+  font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:700;
+  background:rgba(255,255,255,0.08);border:1px solid var(--line);transition:background .2s,color .2s}
+html[data-theme="light"] .opt .ltr{background:rgba(10,20,40,0.06)}
+.opt .txt{flex:1;pointer-events:none}
+.opt .mk{width:17px;height:17px;flex:0 0 17px;align-self:center;margin-left:4px;pointer-events:none}
+.opt.correct{border-color:var(--accent-1);background:var(--ok-bg);box-shadow:0 0 26px rgba(255,107,53,0.22)}
+.opt.correct .ltr{background:var(--accent-1);color:#0A0E13;border-color:var(--accent-1)}
+.opt.correct .mk{stroke:var(--accent-1)}
+.opt.wrong{border-color:var(--accent-3);background:var(--bad-bg)}
+.opt.wrong .ltr{background:var(--accent-3);color:#fff;border-color:var(--accent-3)}
+.opt.wrong .mk{stroke:var(--accent-3)}
+.opt.wrong .txt{text-decoration:line-through;opacity:.72}
+.opt:disabled{cursor:default}
+.opt:disabled:not(.correct):not(.wrong){opacity:.55}
+.explain{max-height:0;overflow:hidden;opacity:0;border-left:3px solid var(--accent-1);
+  transition:max-height .45s cubic-bezier(.4,0,.2,1),opacity .3s,padding-left .3s,margin-top .3s;
+  margin-top:0;padding-left:0}
+.explain.show{max-height:760px;opacity:1;padding-left:14px;margin-top:16px}
+.ex-h{display:block;font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.16em;color:var(--accent-1);margin-bottom:6px}
+.explain p{font-size:13.5px;line-height:1.6;color:var(--muted)}
+.next-btn{
+  display:none;align-items:center;justify-content:center;gap:8px;width:100%;min-height:52px;
+  margin-top:18px;border:0;border-radius:14px;cursor:pointer;touch-action:manipulation;
+  background:linear-gradient(135deg,var(--accent-2),#7FD8FF);color:#04121A;font-weight:700;font-size:15px;
+  box-shadow:0 10px 26px rgba(79,195,247,0.28);transition:transform .14s;
+}
+.next-btn.visible{display:flex}
+.next-btn:active{transform:scale(.986)}
+.next-btn svg{width:17px;height:17px;pointer-events:none}
+
+/* ---------- RESULTS ---------- */
+#screenResults{padding:0 0 calc(34px + env(safe-area-inset-bottom))}
+.res-bar{height:5px;width:100%;background:linear-gradient(90deg,var(--accent-1),var(--accent-2),var(--accent-3))}
+.res-inner{padding:26px 14px 0}
+.res-body{padding:28px 20px;text-align:center}
+.res-score{font-family:'JetBrains Mono',monospace;font-size:46px;font-weight:700;letter-spacing:-.03em;line-height:1.05;
+  background:linear-gradient(135deg,var(--accent-1),var(--accent-2));-webkit-background-clip:text;background-clip:text;
+  color:transparent;animation:popIn .55s cubic-bezier(.2,.9,.3,1.2)}
+@keyframes popIn{from{opacity:0;transform:scale(.86)}to{opacity:1;transform:scale(1)}}
+.res-pct{font-family:'JetBrains Mono',monospace;font-size:15px;color:var(--muted);margin-top:4px}
+.grade-badge{display:inline-flex;align-items:center;gap:9px;margin-top:18px;padding:10px 18px;border-radius:999px;
+  font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;
+  border:1px solid currentColor}
+.grade-badge svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.8}
+.grade-badge.distinction{color:var(--accent-1);box-shadow:0 0 34px rgba(255,107,53,.42);background:rgba(255,107,53,.08)}
+.grade-badge.credit{color:var(--accent-2);box-shadow:0 0 34px rgba(79,195,247,.42);background:rgba(79,195,247,.08)}
+.grade-badge.pass{color:var(--warn);box-shadow:0 0 34px rgba(255,176,32,.38);background:rgba(255,176,32,.08)}
+.grade-badge.fail{color:var(--accent-3);box-shadow:0 0 34px rgba(255,59,87,.38);background:rgba(255,59,87,.08)}
+.topic-list{margin-top:26px;text-align:left}
+.topic-row{margin-bottom:14px}
+.topic-head{display:flex;justify-content:space-between;gap:10px;font-size:12px;margin-bottom:6px}
+.topic-name{color:var(--text);font-weight:500}
+.topic-val{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}
+.tbar{height:7px;border-radius:7px;background:var(--track);overflow:hidden}
+.tbar-fill{height:100%;width:0;border-radius:7px;transition:width 1s cubic-bezier(.3,.9,.3,1)}
+.tbar-fill.good{background:var(--accent-1)}
+.tbar-fill.mid{background:var(--warn)}
+.tbar-fill.low{background:var(--accent-3)}
+.advice,.potential{text-align:left;font-size:13.5px;line-height:1.62;color:var(--muted);
+  border-left:3px solid var(--accent-2);padding:2px 0 2px 14px;margin-top:22px}
+.potential{border-left-color:var(--accent-1);color:var(--text)}
+.res-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:26px}
+.btn-ghost,.btn-solid{display:flex;align-items:center;justify-content:center;gap:8px;min-height:50px;
+  border-radius:13px;cursor:pointer;font-size:13.5px;font-weight:600;touch-action:manipulation;
+  transition:transform .14s,background .2s}
+.btn-ghost{background:transparent;border:1px solid var(--line);color:var(--text)}
+.btn-solid{background:linear-gradient(135deg,var(--accent-1),#FF8F5E);border:0;color:#0A0E13}
+.btn-ghost:active,.btn-solid:active{transform:scale(.98)}
+.btn-ghost svg,.btn-solid svg{width:16px;height:16px;pointer-events:none}
+
+/* ---------- SECTION B ---------- */
+#screenB{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
+#bArea{padding:18px 14px 0}
+.b-tally{max-width:700px;margin:0 auto 14px;display:flex;align-items:center;gap:9px;
+  font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--accent-2);
+  padding:10px 14px;border-radius:12px;border:1px solid var(--line);background:rgba(79,195,247,0.07)}
+.b-tally svg{width:15px;height:15px;stroke:var(--accent-2)}
+.b-block{margin-bottom:16px}
+.b-title{font-size:16.5px;font-weight:700;margin-bottom:10px}
+.b-context{font-size:13.5px;line-height:1.62;color:var(--muted);border-left:2px solid var(--line);padding-left:12px;margin-bottom:18px}
+.part{border-top:1px solid var(--line);padding-top:16px;margin-top:16px}
+.part-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
+.plabel{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:var(--accent-1)}
+.pmarks{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.08em;color:var(--muted)}
+.ptext{font-size:14px;line-height:1.55;margin-bottom:12px}
+.reveal-btn{display:inline-flex;align-items:center;gap:7px;min-height:44px;padding:0 15px;border-radius:11px;
+  cursor:pointer;touch-action:manipulation;font-size:12.5px;font-weight:600;
+  background:rgba(79,195,247,0.10);border:1px solid rgba(79,195,247,0.3);color:var(--accent-2)}
+.reveal-btn svg{width:14px;height:14px;stroke:currentColor;transition:transform .3s;pointer-events:none}
+.reveal-btn.open svg{transform:rotate(180deg)}
+.model{max-height:0;overflow:hidden;opacity:0;margin-top:0;
+  transition:max-height .5s cubic-bezier(.4,0,.2,1),opacity .35s,margin-top .35s}
+.model.show{max-height:900px;opacity:1;margin-top:12px}
+.model-in{font-size:13.5px;line-height:1.66;color:var(--muted);border-left:3px solid var(--accent-1);padding:2px 0 2px 14px}
+.model-in b{color:var(--text);font-weight:600}
+.selfmark{display:flex;align-items:center;gap:10px;min-height:46px;margin-top:12px;font-size:12.5px;
+  color:var(--muted);cursor:pointer;user-select:none;border:1px solid var(--line);border-radius:11px;padding:0 13px;
+  transition:border-color .2s,background .2s,color .2s}
+.selfmark input{appearance:none;-webkit-appearance:none;width:19px;height:19px;flex:0 0 19px;
+  border:1.5px solid var(--line);border-radius:5px;cursor:pointer;position:relative}
+.selfmark input:checked{background:var(--accent-1);border-color:var(--accent-1)}
+.selfmark input:checked::after{content:"";position:absolute;left:6px;top:2px;width:5px;height:10px;
+  border:solid #0A0E13;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.selfmark.checked{border-color:var(--accent-1);color:var(--text);background:rgba(255,107,53,0.07)}
+
+/* ---------- CONFETTI ---------- */
+.confetti{position:fixed;top:-24px;z-index:80;pointer-events:none;animation:fall linear forwards}
+@keyframes fall{0%{transform:translateY(0) rotate(0);opacity:1}100%{transform:translateY(105vh) rotate(760deg);opacity:0}}
+
+@media (max-width:380px){
+  .res-actions{grid-template-columns:1fr}
+  .sc-title{font-size:22px}
+  .res-score{font-size:40px}
+}
+
+/* ---------- MULTIPLAYER LAYER ---------- */
+.cta[hidden]{display:none}
+.cta:disabled{opacity:.6;cursor:default;transform:none}
+.mp-gate{margin-bottom:14px}
+.mp-gate:empty{display:none}
+.mp-after{margin-top:12px;display:grid;gap:10px}
+.mp-after:empty{display:none}
+.mp-panel{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:rgba(255,255,255,0.02);
+  font-size:13px;line-height:1.5;color:var(--text);text-align:left}
+html[data-theme="light"] .mp-panel{background:rgba(255,255,255,0.5)}
+.mp-panel + .mp-panel{margin-top:10px}
+.mp-row{display:flex;align-items:center;gap:10px}
+.mp-ic{width:18px;height:18px;flex:0 0 18px;color:var(--accent-2)}
+.mp-ic.warn{color:var(--warn)}
+.mp-ic.bad{color:var(--accent-3)}
+.mp-title{font-weight:600;font-size:14px}
+.mp-msg{color:var(--muted);font-size:12.5px;margin-top:6px;line-height:1.55}
+.mp-err{color:var(--accent-3);font-size:12.5px;margin-top:8px;line-height:1.5}
+.mp-btns{display:grid;gap:10px;margin-top:12px}
+.mp-link{background:none;border:0;padding:6px 4px;cursor:pointer;font-size:12px;color:var(--accent-2);
+  text-decoration:underline;touch-action:manipulation;min-height:32px}
+.mp-user{display:flex;align-items:center;gap:10px}
+.mp-uname{flex:1;min-width:0;font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mp-stats{display:flex;gap:8px;margin-top:9px;flex-wrap:wrap}
+.mp-spin{animation:mpspin 1s linear infinite}
+@keyframes mpspin{to{transform:rotate(360deg)}}
+.mp-save{margin-top:18px}
+.mp-save:empty{display:none}
+.mp-danger{border-color:var(--accent-3)}
+.btn-solid.mp-danger{background:var(--accent-3);color:#fff}
+.btn-ghost.mp-danger{color:var(--accent-3)}
+
+/* leaderboard */
+#screenLb{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
+#lbArea{padding:18px 14px 0}
+.mp-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:9px}
+.mp-tab{min-height:40px;border-radius:10px;border:1px solid var(--line);background:transparent;cursor:pointer;
+  font-size:12.5px;font-weight:600;color:var(--muted);touch-action:manipulation}
+.mp-tab.active{color:var(--text);border-color:var(--accent-1);background:var(--ok-bg)}
+.mp-lb-title{font-size:20px;font-weight:700;letter-spacing:-.02em;margin-bottom:4px}
+.mp-backlink{margin:-6px 0 6px -4px}
+.lb-sec{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.16em;color:var(--accent-1);margin:20px 0 4px}
+.lb-row{display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:center;padding:11px 8px;border-top:1px solid var(--line)}
+.lb-row.me{background:var(--ok-bg);border-radius:10px;border-top-color:transparent;box-shadow:inset 0 0 0 1px var(--accent-1)}
+.lb-rank{font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--muted);text-align:center}
+.lb-row.r1 .lb-rank{color:var(--accent-1)}
+.lb-row.r2 .lb-rank{color:var(--accent-2)}
+.lb-row.r3 .lb-rank{color:var(--warn)}
+.lb-main{min-width:0}
+.lb-name{font-weight:600;font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lb-sub{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:2px}
+.lb-sub svg{width:12px;height:12px}
+.lb-score{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:18px;color:var(--accent-2)}
+.lb-rank svg{width:16px;height:16px;color:var(--muted)}
+.lb-you{font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.12em;border:1px solid var(--accent-1);
+  color:var(--accent-1);border-radius:6px;padding:1px 6px;margin-left:8px;vertical-align:middle}
+.lb-empty{color:var(--muted);font-size:13px;padding:10px 4px}
+.lb-state{font-size:12.5px;margin-top:10px;padding:10px 12px;border-radius:10px;border:1px solid var(--line);color:var(--muted)}
+.lb-state.bad{color:var(--accent-3);border-color:var(--accent-3)}
+.lb-quiz{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;min-height:54px;
+  padding:12px 14px;margin-top:9px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,0.03);
+  cursor:pointer;touch-action:manipulation}
+html[data-theme="light"] .lb-quiz{background:rgba(255,255,255,0.6)}
+.lb-quiz .qt{min-width:0}
+.lb-quiz b{display:block;font-size:14px;font-weight:600}
+.lb-quiz small{display:block;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--muted);margin-top:2px}
+.lb-quiz svg{width:16px;height:16px;flex:0 0 16px;color:var(--accent-2);pointer-events:none}
+.lb-quiz > *{pointer-events:none}
+.mp-owner{margin-top:24px;border-top:1px solid var(--line);padding-top:16px}
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+
+<!-- ============ START ============ -->
+<section class="screen active" id="screenStart">
+  <div class="hero-img"></div>
+  <div class="hero-fade"></div>
+  <div class="card-wrap">
+    <div class="glass-card">
+      <div class="sheen"></div>
+      <div class="thickness"></div>
+      <div class="card-body start-body">
+        <div class="course-code">PSTR 212 · BIOMECHANICS · LEVEL 300</div>
+        <h1 class="sc-title">Kinesiology:<br>Newton's Laws of Motion in Physiotherapy</h1>
+        <p class="sc-sub">Week 2, Lecture 2 — Practice Paper, Section A and Section B</p>
+        <div class="meta-grid">
+          <div class="meta"><span class="meta-v">30:00</span><span class="meta-k">Time limit</span></div>
+          <div class="meta"><span class="meta-v">27</span><span class="meta-k">MCQs</span></div>
+          <div class="meta"><span class="meta-v">27</span><span class="meta-k">Section A marks</span></div>
+          <div class="meta"><span class="meta-v">2</span><span class="meta-k">Section B questions</span></div>
+        </div>
+        <div class="mp-gate" id="mpGate"></div>
+        <button class="cta" id="beginBtn" type="button" hidden>
+          Begin Exam
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </button>
+        <div class="mp-after" id="mpGateAfter"></div>
+        <p class="sc-note">Section A is auto-marked with instant feedback and a full answer key. Section B is self-review with model answers and a manual tally.</p>
+        <p class="sc-note">Honor system. Answers are not monitored, no looking things up or using AI.</p>
+        <p class="sc-note">One attempt per account. Closing the page mid-quiz uses your attempt.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ EXAM ============ -->
+<section class="screen" id="screenExam">
+  <div class="nav">
+    <div class="nav-top">
+      <div class="pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 15 8.5l7 1-5 4.9 1.2 7L12 18l-6.2 3.4L7 14.4 2 9.5l7-1z"/></svg>
+        <span id="scoreStat">0 pts</span>
+      </div>
+      <div class="timer" id="timer">30:00</div>
+      <button class="icon-btn" id="themeBtn" type="button" aria-label="Toggle theme">
+        <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      </button>
+    </div>
+    <div class="timer-track"><div class="timer-fill" id="timerFill"></div></div>
+    <div class="nav-bottom">
+      <span class="qcount" id="qCount">Question 1 of 27</span>
+      <div class="qtrack"><div class="qfill" id="qFill"></div></div>
+    </div>
+    <div class="mp-stats">
+      <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg><span id="streakStat">Streak 0 (best 0)</span></span>
+      <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg><span id="answeredStat">Answered 0/27</span></span>
+    </div>
+  </div>
+  <div id="qArea"></div>
+</section>
+
+<!-- ============ RESULTS ============ -->
+<section class="screen" id="screenResults">
+  <div class="res-bar"></div>
+  <div class="res-inner">
+    <div class="card-wrap">
+      <div class="glass-card">
+        <div class="sheen"></div>
+        <div class="thickness"></div>
+        <div class="card-body res-body">
+          <div class="res-score" id="resScore">0 / 27</div>
+          <div class="res-pct" id="resPct">0%</div>
+          <div class="grade-badge" id="gradeBadge"></div>
+          <div class="mp-save" id="mpSave"></div>
+          <div class="topic-list" id="topicList"></div>
+          <p class="advice" id="advice"></p>
+          <p class="potential" id="potential"></p>
+          <div class="res-actions">
+            <button class="btn-ghost" id="lbBtn" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20v-6M12 20V6M19 20v-10"/></svg>
+              Leaderboard
+            </button>
+            <button class="btn-solid" id="toBBtn" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 0-2 2z"/><path d="M4 19a2 2 0 0 1 2-2h12"/></svg>
+              Section B
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SECTION B ============ -->
+<section class="screen" id="screenB">
+  <div class="nav">
+    <div class="nav-top">
+      <button class="icon-btn" id="backBtn" type="button" aria-label="Back to results">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+      </button>
+      <div class="pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 0-2 2z"/><path d="M4 19a2 2 0 0 1 2-2h12"/></svg>
+        <span>Section B · 20 marks</span>
+      </div>
+      <button class="icon-btn" id="themeBtn2" type="button" aria-label="Toggle theme">
+        <svg id="themeIcon2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      </button>
+    </div>
+  </div>
+  <div id="bArea"></div>
+</section>
+
+<!-- ============ LEADERBOARD ============ -->
+<section class="screen" id="screenLb">
+  <div class="nav">
+    <div class="nav-top">
+      <button class="icon-btn" id="lbBackBtn" type="button" data-mp="lb-back" aria-label="Back">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+      </button>
+      <div class="pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg>
+        <span>Leaderboard</span>
+      </div>
+      <button class="icon-btn" id="themeBtn3" type="button" aria-label="Toggle theme">
+        <svg id="themeIcon3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      </button>
+    </div>
+    <div class="mp-tabs">
+      <button class="mp-tab active" id="tabThis" type="button" data-mp="tab-this">This quiz</button>
+      <button class="mp-tab" id="tabOthers" type="button" data-mp="tab-others">Other quizzes</button>
+    </div>
+  </div>
+  <div id="lbArea"></div>
+</section>
+
+<script>
+(function(){
+'use strict';
+
+/* =========================================================
+   DATA
+   ========================================================= */
+var CONFIG = {
+  courseCode: 'PSTR 212',
+  courseName: "Kinesiology: Newton's Laws of Motion in Physiotherapy",
+  examYear:   'Level 300 · Week 2, Lecture 2',
+  totalTime:  1800
+};
+
+var SECTION_A = [
+{
+  q: "A student says a stiff knee will not move until a force acts on it, so she picks the first law for range of motion restoration. Why is the second law the better answer?",
+  opts: [
+    "Range depends on which muscles contract concentrically and eccentrically",
+    "Range depends on equal and opposite reaction at the joint surfaces",
+    "Range concerns motion, and force produces motion by accelerating the segment",
+    "Range depends on the body staying in inertia until a force acts"
+  ],
+  ans: 2,
+  topic: "Newton's Laws — Core Concepts",
+  pts: 1,
+  explain: "Range of motion is about motion itself, and the second law links force, mass and acceleration: a force moves a segment by accelerating it, which is exactly what restoring range requires. Which muscles contract concentrically and eccentrically is the off-target explanation the lecturer rejected; equal and opposite reaction at the joint surfaces is a third-law idea; and staying in inertia until a force acts is first-law wording that answers the other tasks, not this one."
+},
+{
+  q: "Two passengers sit upright in one minibus. One watches the road and sees a truck about to hit from behind; the other dozes. Only the dozing passenger develops typical whiplash. Which best explains this?",
+  opts: [
+    "The alert passenger's greater body mass meant less force reached the neck",
+    "The dozing passenger's neck received a larger reaction from the seat",
+    "Only a passenger already moving with the vehicle can develop whiplash",
+    "The force must be sudden and unexpected, and an alert person adjusts"
+  ],
+  ans: 3,
+  topic: "Whiplash Mechanism",
+  pts: 1,
+  explain: "Whiplash needs a sudden, unexpected force acting on an unsupported neck; the passenger who sees the impact coming braces and adjusts, so the typical pattern does not develop. Body mass is not the deciding factor here, a larger reaction from the seat is a third-law idea the lecturer did not use, and the acceleration injury begins from rest rather than requiring the passenger to be already moving."
+},
+{
+  q: "A driver waiting upright at a junction with no headrest is hit from behind. What is the immediate tissue effect in the neck?",
+  opts: [
+    "Posterior structures stretched while anterior structures are compressed",
+    "Anterior structures stretched while posterior structures are compressed",
+    "Anterior and posterior structures are both stretched by the impact",
+    "Anterior and posterior structures are both compressed by the impact"
+  ],
+  ans: 1,
+  topic: "Whiplash Mechanism",
+  pts: 1,
+  explain: "The trunk is driven forward while the unsupported neck lags, so the neck is forced into sudden extension: anterior structures are stretched and posterior structures are compressed. The reversed pattern describes the deceleration injury, and the two 'both' options wrongly assume that one side of the neck is not being stretched while the other is compressed."
+},
+{
+  q: "A passenger in a moving minibus is unaware when the driver brakes hard to avoid a cyclist. Neck pain follows. Which best explains the neck movement?",
+  opts: [
+    "The vehicle stops but the body keeps moving, driving the neck into flexion",
+    "The seat pushes the trunk backward, driving the neck into extension",
+    "The neck stays at rest while the trunk accelerates backward into flexion",
+    "Equal and opposite reaction from the floor throws the head forward"
+  ],
+  ans: 0,
+  topic: "Whiplash Mechanism",
+  pts: 1,
+  explain: "By the first law the body keeps its state of motion when the vehicle halts, so the trunk continues forward and the unsupported neck is driven into flexion — the deceleration injury. The seat pushing the trunk backwards describes the rear-impact acceleration injury, the neck does not stay at rest while the trunk moves backwards, and the floor reaction is a third-law idea the lecturer did not use."
+},
+{
+  q: "A patient arrives after a road traffic accident with neck pain and cannot turn the neck. Which question helps most in judging how intense the force was?",
+  opts: [
+    "Have you ever had neck pain before this accident?",
+    "How many people were travelling in the same vehicle?",
+    "Were you seated in the front or in the back?",
+    "At what time of day did the collision happen?"
+  ],
+  ans: 2,
+  topic: "Clinical Assessment",
+  pts: 1,
+  explain: "In the subjective assessment the lecturer linked seating position — front seat or back seat — directly to the intensity of the force the neck received. Previous neck pain is useful history but says nothing about force, the number of occupants is unrelated, and the time of day has no bearing on force intensity."
+},
+{
+  q: "Which entry is suitable as a physical diagnosis written by the physiotherapist after assessing a patient with neck pain from a collision?",
+  opts: [
+    "Cervical spondylosis with nerve root compression signs",
+    "Acceleration whiplash injury from a road traffic accident",
+    "Fracture-dislocation of the cervical spine at C5",
+    "Cervical disc herniation at the C5/C6 level"
+  ],
+  ans: 1,
+  topic: "Clinical Assessment",
+  pts: 1,
+  explain: "The lecturer's model wording names the mechanism and the cause — an acceleration whiplash injury secondary to a road traffic accident — which is a physical, physiotherapy diagnosis. Spondylosis with nerve root compression, fracture-dislocation and disc herniation are medical diagnoses, and the lecturer was explicit that physiotherapists are not to diagnose medically."
+},
+{
+  q: "A therapist gives every post-collision neck patient the same exercise programme without asking how the collision happened. What is the strongest criticism?",
+  opts: [
+    "The first law stops applying once the patient is seen",
+    "Neck exercise suits only deceleration injuries of the neck",
+    "Range of motion cannot change after a neck injury",
+    "Different tissues are stretched or compressed by each mechanism"
+  ],
+  ans: 3,
+  topic: "Clinical Assessment",
+  pts: 1,
+  explain: "Acceleration and deceleration injuries stretch some tissues and compress others, so without knowing the mechanism the therapist cannot know which structures to protect or load. The laws do not stop applying in the clinic, exercise is not restricted to deceleration injuries, and range of motion is precisely what treatment aims to change."
+},
+{
+  q: "A woman three days after a stroke has no voluntary activity in her left elbow flexors. Which exercise type does the lecturer's reasoning suggest first?",
+  opts: [
+    "Resisted exercise of the elbow flexors",
+    "Active-assisted exercise for the elbow flexors",
+    "Passive movement through the available range",
+    "Abduction and adduction exercises of the shoulder"
+  ],
+  ans: 2,
+  topic: "Exercise Prescription",
+  pts: 1,
+  explain: "With complete paralysis the therapist must do the movement for the patient, so passive movement comes first on the staircase. Resisted exercise suits patients who already move actively, active-assisted exercise suits paresis rather than full paralysis, and abduction and adduction are movements rather than an exercise type — the lecturer corrected that answer in class."
+},
+{
+  q: "A stroke patient who began with passive movement now moves the limb actively through full range. What does the lecturer's staircase suggest next?",
+  opts: [
+    "Return to passive movement for safety",
+    "Resisted exercise to strengthen the muscle",
+    "Active-assisted exercise to gain more range",
+    "Massage alone, since the muscle is active"
+  ],
+  ans: 1,
+  topic: "Exercise Prescription",
+  pts: 1,
+  explain: "Once the patient can move actively, resisted exercise is added to strengthen the muscle — that is the next step on the staircase. Returning to passive movement goes backwards, active-assisted exercise belongs to the earlier paresis stage, and massage is used to activate a dormant muscle rather than to strengthen one that is already active."
+},
+{
+  q: "Electrical muscle stimulation is applied to a paralysed facial muscle in Bell's palsy. Which law-based reasoning best explains the benefit?",
+  opts: [
+    "Third law: stimulation produces an equal and opposite reaction in tissue",
+    "Second law: stimulation reduces the mass of the paralysed muscle",
+    "First law: a moving muscle must be stopped by the stimulus applied",
+    "First law: a dormant muscle stays dormant until a force excites it"
+  ],
+  ans: 3,
+  topic: "Exercise Prescription",
+  pts: 1,
+  explain: "The lecturer treated muscle impairment as inertia: a dormant muscle stays dormant until a force acts on it, and electrical stimulation, massage and tactile input supply that force. Equal and opposite reaction is a third-law idea not used here, stimulation does not change muscle mass, and a moving muscle needing to be stopped reverses the way the first law was applied."
+},
+{
+  q: "A stroke patient shows uncontrolled limb movement that carries on until something is done about it. Which interpretation fits the lecturer's teaching?",
+  opts: [
+    "A moving body continues unless arrested, so therapy must arrest it",
+    "The limb has too little mass, so any force produces movement",
+    "The limb pushes back equally, so movement cannot be controlled",
+    "The muscle is at rest and needs a push to begin moving"
+  ],
+  ans: 0,
+  topic: "Newton's Laws — Core Concepts",
+  pts: 1,
+  explain: "This is the first law turned around: abnormal movement continues unless it is arrested, and physiotherapy approaches are what arrest it. Too little mass misuses the second law, equal push-back misuses the third law, and a muscle needing a push to start describes the dormant muscle rather than this abnormal ongoing movement."
+},
+{
+  q: "In an exam question on level of muscle tension, a student reasons that tension depends on the line of gravity and cites the third law. What is the lecturer's position?",
+  opts: [
+    "The answer is wrong and earns no marks at all here",
+    "The first law is best, but reasoned third-law answers earn credit",
+    "The second law is the only correct answer for this question",
+    "Any law is accepted if the student names it first"
+  ],
+  ans: 1,
+  topic: "Newton's Laws — Core Concepts",
+  pts: 1,
+  explain: "The straightforward answer is the first law, because muscle tension can be zero; but the lecturer said a reasoned answer built on another law could still earn a mark. Saying it earns nothing ignores that allowance, the second law is the law for range of motion rather than tension, and credit follows the reasoning rather than the mere naming of a law."
+},
+{
+  q: "A therapist's first patient of the day has massive limb segments; the second is slim. Both need the same manipulation. What can the therapist expect?",
+  opts: [
+    "Skill removes any difference in the force that is needed",
+    "The slim patient needs more thrust because light segments are unstable",
+    "Both need equal thrust because the technique is the same",
+    "The heavier patient needs more thrust, since force rises with mass"
+  ],
+  ans: 3,
+  topic: "Clinical Application — Mass & Force",
+  pts: 1,
+  explain: "Thrust depends on the mass of the individual: for the same acceleration a heavier segment needs a larger force, and skill helps but does not remove that fact. The slim patient does not need more thrust, equal thrust ignores mass altogether, and identical technique does not make the required force identical."
+},
+{
+  q: "A 48 kg woman and a 110 kg man have equally stiff elbows. The same therapist applies identical forceful mobilisation. Which outcome is most likely, and why?",
+  opts: [
+    "The man gains more range, since his heavier segment has more momentum",
+    "Both gain an equal range, because the applied force is the same",
+    "The woman gains range quicker, as the same force accelerates less mass",
+    "The woman gains less range, because a lighter segment resists more"
+  ],
+  ans: 2,
+  topic: "Clinical Application — Mass & Force",
+  pts: 1,
+  explain: "For the same applied force the smaller mass accelerates more, so the slim patient gains range more quickly — exactly the lecture's clinical application. Momentum is not the lecturer's reasoning, equal force does not mean equal acceleration when the masses differ, and a lighter segment does not resist movement more than a heavier one."
+},
+{
+  q: "Two colleagues, one slim and one obese, sit side by side in a minibus hit from behind. Which statement matches the lecturer's conclusion on who is likely to have more neck injury, all other things being equal?",
+  opts: [
+    "The slim colleague, because a more flexible neck moves further and is injured",
+    "The obese colleague, because a heavier body leaves more force on the neck",
+    "The slim colleague, because less force is needed to accelerate a lighter body",
+    "Both equally, because the same force acts on both seated colleagues"
+  ],
+  ans: 0,
+  topic: "Clinical Application — Mass & Force",
+  pts: 1,
+  explain: "The lecturer assumed the force to be equal and reasoned that flexibility drives whiplash severity, so the slim colleague with the more mobile neck is likely to be injured more. A heavier body leaving more force on the neck has no basis in his account, the lighter-body force argument was the one he told students not to use, and the same force does not produce the same injury."
+},
+{
+  q: "During a kick, a footballer's quadriceps extends the knee. Which describes the hamstrings' action in the lecturer's account?",
+  opts: [
+    "Relaxed completely, so they play no part at all",
+    "Contracting concentrically to speed up knee extension more",
+    "Contracting without any change in their resting length",
+    "Contracting eccentrically to decelerate and check the quadriceps"
+  ],
+  ans: 3,
+  topic: "Muscle Action",
+  pts: 1,
+  explain: "The antagonist contracts eccentrically, and eccentric contraction is deceleration — it checks the agonist so extension is controlled rather than unrestrained. The hamstrings are not silent, concentric contraction belongs to the agonist quadriceps, and a contraction with no change in length is not the account the lecturer gave."
+},
+{
+  q: "A student tells a patient that eccentric work is a negative thing to avoid. Which correction best reflects the lecturer's view?",
+  opts: [
+    "It is useful only in paralysed and inactive muscles",
+    "It checks the agonist, which would otherwise lack a brake",
+    "It is the same as concentric work apart from speed",
+    "It accelerates the segment in the intended direction"
+  ],
+  ans: 1,
+  topic: "Muscle Action",
+  pts: 1,
+  explain: "Eccentric work is necessary, not negative: it checks the agonist, which would otherwise contract without a brake. It is not restricted to paralysed muscle, it is not simply concentric work at a different speed, and accelerating the segment in the intended direction is the job of concentric contraction."
+},
+{
+  q: "In right-sided Bell's palsy a man's mouth is pulled toward his left when he smiles. Which best explains this in the lecturer's terms?",
+  opts: [
+    "The healthy side loses tone, so the paralysed side overpowers it",
+    "The paralysed side contracts concentrically and shortens far too much",
+    "With the agonists paralysed, the working muscles act without opposition",
+    "Equal and opposite reaction pulls the mouth toward the stronger side"
+  ],
+  ans: 2,
+  topic: "Muscle Action",
+  pts: 1,
+  explain: "This is the lecturer's example of unopposed muscle action: the agonists on one side are paralysed, so the opposing muscles have a field day and pull the mouth across. It is not the healthy side that loses tone, a paralysed muscle cannot contract concentrically, and equal and opposite reaction is not his reason for the pull."
+},
+{
+  q: "A student says any body whose forces are unbalanced must have zero velocity. Which correction fits the lecturer's account?",
+  opts: [
+    "Zero velocity means static equilibrium; unbalanced forces produce motion",
+    "Zero velocity occurs only when a body's mass is very small",
+    "Unbalanced forces keep a body at rest until another force acts",
+    "Balanced forces make a body accelerate in proportion to its mass"
+  ],
+  ans: 0,
+  topic: "Newton's Laws — Core Concepts",
+  pts: 1,
+  explain: "Static equilibrium is the state of zero velocity, and it belongs to balanced forces; unbalanced forces mean the body is in motion. Mass has nothing to do with it, unbalanced forces do not hold a body at rest, and balanced forces produce no acceleration at all."
+},
+{
+  q: "A man with stroke rises from a chair and ends up on the floor. Which best explains the fall?",
+  opts: [
+    "Gravity stopped acting on him during the postural transition",
+    "His body mass increased as he stood up from the chair",
+    "The ground pushed back with less force than he pressed down",
+    "His line of gravity fell outside his base of support uncorrected"
+  ],
+  ans: 3,
+  topic: "Balance & Postural Control",
+  pts: 1,
+  explain: "During every postural transition the line of gravity must stay within the base of support; if it falls outside and the muscles and senses fail to correct it, the patient goes down. Gravity does not switch off, body mass does not increase on standing, and unequal action and reaction at the ground breaks the third law rather than explaining the fall."
+},
+{
+  q: "An elderly patient tires quickly from standing. Which muscle group works every day against gravity to keep her upright?",
+  opts: [
+    "Biceps, triceps, deltoids and the pectoral muscles",
+    "Wrist extensors, finger flexors and facial muscles",
+    "Calf, paraspinals, quadriceps and gluteal muscles",
+    "Hand intrinsics, masseter and temporalis muscles"
+  ],
+  ans: 2,
+  topic: "Balance & Postural Control",
+  pts: 1,
+  explain: "The calf, paraspinals, quadriceps and gluteals are the large antigravity muscles that counteract gravity every day to keep the body upright. The other groups listed are upper limb, distal or facial muscles, none of which the lecturer named as postural antigravity groups."
+},
+{
+  q: "A 72-year-old woman with a degenerative knee cannot share load normally through the joint. In the lecturer's third-law recap, which balance inside the joint is compromised?",
+  opts: ["Internal balance","External balance","Balance of momentum","Rotational balance"],
+  ans: 0,
+  topic: "Balance & Postural Control",
+  pts: 1,
+  explain: "Internal balance is the balance of forces inside the joint, and degenerative conditions and injuries compromise it. External balance concerns keeping the line of gravity within the base of support, while balance of momentum and rotational balance are not terms the lecturer used."
+},
+{
+  q: "A student must name the law for (1) range of motion restoration, (2) injury mechanism and (3) level of muscle tension. Which set matches the lecturer's answers?",
+  opts: [
+    "1 first, 2 second, 3 third",
+    "1 second, 2 first, 3 third",
+    "1 second, 2 first, 3 first",
+    "1 first, 2 first, 3 second"
+  ],
+  ans: 2,
+  topic: "Newton's Laws — Core Concepts",
+  pts: 1,
+  explain: "Range of motion restoration is the second law, while whiplash injury mechanism and level of muscle tension are both the first law in his end-of-lecture self-test. The sets that give the first law for range of motion are wrong, and so is the set that gives the third law for muscle tension, which he said was not the straightforward answer."
+},
+{
+  q: "Which scenario meets both conditions the lecturer gave for the classic whiplash mechanism?",
+  opts: [
+    "A driver braced against the headrest who sees a truck approaching",
+    "An unaware passenger upright in a stationary taxi hit from behind",
+    "A passenger lying flat in an ambulance that brakes sharply",
+    "A passenger wearing a cervical collar when the vehicle is hit"
+  ],
+  ans: 1,
+  topic: "Whiplash Mechanism",
+  pts: 1,
+  explain: "Both conditions are met here: the neck is upright, stationary and unsupported, and the force arrives suddenly and unexpectedly from behind. A braced, aware driver is supported and prepared, a lying passenger is not upright, and a cervical collar supports the neck."
+},
+{
+  q: "After a crash a patient has neck pain and a tibial fracture. Which statement fits how the lecturer used the term whiplash?",
+  opts: [
+    "Whiplash describes any injury from sudden braking, in any body part",
+    "Whiplash includes the tibial fracture because the mechanism is the same",
+    "Whiplash can occur in the lumbar spine by the same mechanism",
+    "Whiplash is the neck injury only; fractures are separate injuries"
+  ],
+  ans: 3,
+  topic: "Whiplash Mechanism",
+  pts: 1,
+  explain: "The lecturer restricted whiplash to the neck, treating a leg fracture as a separate injury rather than part of the whiplash picture. Extending the term to any body part, to the tibia, or to the lumbar spine stretches it beyond how he used it."
+},
+{
+  q: "In a rear-end impact the trunk is held by the backrest, yet the neck goes into extension. What best explains this?",
+  opts: [
+    "The neck has a greater mass than the trunk",
+    "The backrest pushes the neck backward with a greater force",
+    "The neck is unsupported and far more mobile than the trunk",
+    "The trunk moves at constant velocity while the neck accelerates"
+  ],
+  ans: 2,
+  topic: "Whiplash Mechanism",
+  pts: 1,
+  explain: "The backrest supports the trunk, but the neck has no support and is far more mobile, so it is left behind and forced into extension — his answer to Aaron's question. The neck is not heavier than the trunk, the backrest does not act on the neck, and constant trunk velocity is not the explanation he gave."
+},
+{
+  q: "Why is whiplash described as a particularly painful injury?",
+  opts: [
+    "Both the stretched and the compressed neck structures are injured",
+    "Only the posterior structures are injured, and they are painful",
+    "The force is always large enough to fracture the cervical vertebrae",
+    "The injury spreads through the whole spine from the neck"
+  ],
+  ans: 0,
+  topic: "Whiplash Mechanism",
+  pts: 1,
+  explain: "Whichever mechanism operates, some neck structures are stretched while others are compressed, so both sides of the neck are injured and the injury is especially painful. Saying only the posterior structures are affected is wrong because the anterior side is compressed, fracture is not guaranteed, and the injury does not spread through the whole spine."
+}
+];
+
+var SECTION_B = [
+{
+  title: "Question 1 — The Whiplash Mechanism",
+  marks: 10,
+  context: "A 34-year-old driver is waiting upright at a junction, with no headrest fitted. A vehicle strikes his car from behind without warning. He later reports severe neck pain and cannot turn his head.",
+  parts: [
+    {
+      label: "(a)",
+      text: "Using Newton's first law, explain why the unsupported neck is forced into extension.",
+      marks: 3,
+      answer: "The trunk is held and driven forward by the seat back, but the neck is unsupported. <b>By the first law, a body remains in its state of rest unless acted on by an external force</b>, so the head tends to stay where it is while the trunk moves forward beneath it. The result is a <b>sudden extension</b> of the cervical spine: <b>anterior structures are stretched and posterior structures are compressed</b>."
+    },
+    {
+      label: "(b)",
+      text: "Distinguish the acceleration injury from the deceleration injury in terms of which tissues are stretched and which are compressed.",
+      marks: 4,
+      answer: "<b>Acceleration injury (rear impact):</b> the vehicle is driven forward and the body follows, leaving the unsupported neck behind in <b>extension</b> — <b>anterior structures stretched, posterior structures compressed</b>. <b>Deceleration injury (sudden braking):</b> the vehicle stops but the body keeps moving forward by the first law, driving the neck into <b>flexion</b> — <b>posterior structures stretched, anterior structures compressed</b>. In both cases one side is stretched while the other is compressed, which is why whiplash is so painful."
+    },
+    {
+      label: "(c)",
+      text: "State the two conditions the lecturer required for the classic whiplash mechanism.",
+      marks: 2,
+      answer: "(1) The neck must be <b>upright, stationary and unsupported</b>. (2) The force must be <b>sudden and unexpected</b>, so the person cannot brace or adjust in time. A passenger who sees the impact coming adjusts and does not develop the typical pattern."
+    },
+    {
+      label: "(d)",
+      text: "Explain why a heavier, less flexible individual may sustain less whiplash than a slim one, all other things being equal.",
+      marks: 1,
+      answer: "The lecturer assumed the force to be <b>equal</b> and reasoned that <b>flexibility</b> determines severity: a heavier, less flexible person has a stiffer neck that moves less, so less tissue is stretched and compressed."
+    }
+  ]
+},
+{
+  title: "Question 2 — Newton's Laws in Physiotherapy Practice",
+  marks: 10,
+  context: "A physiotherapist is planning care for three patients: one recovering knee range of motion after immobilisation, one with an acceleration whiplash injury, and one whose limb muscle is completely flaccid. She also has to mobilise a slim patient and a heavily built patient with equally stiff elbows.",
+  parts: [
+    {
+      label: "(a)",
+      text: "Match the three lecture tasks — range of motion restoration, injury mechanism and level of muscle tension — to the appropriate law, and give the lecturer's reason for each.",
+      marks: 3,
+      answer: "<b>Range of motion restoration — second law.</b> Range is about motion, and the second law links force, mass and acceleration: a force moves a segment by accelerating it. <b>Injury mechanism (whiplash) — first law.</b> The body keeps its state of motion or rest unless an external force acts, which explains the trunk continuing forward or the head lagging behind. <b>Level of muscle tension — first law.</b> Tension can be zero, so a body remains as it is until a force acts. A reasoned answer using another law may still earn credit."
+    },
+    {
+      label: "(b)",
+      text: "Using a footballer's kick, explain the roles of concentric and eccentric contraction and why eccentric work is not a 'negative' to be avoided.",
+      marks: 4,
+      answer: "The <b>quadriceps contract concentrically</b> to <b>accelerate</b> the knee into extension — the agonist drives the movement. At the same time the <b>hamstrings contract eccentrically</b> to <b>decelerate</b> the segment; eccentric contraction is <b>deceleration</b>. Without that eccentric braking the agonist would contract without a check and the movement would be uncontrolled, so eccentric work is <b>necessary</b>, not negative."
+    },
+    {
+      label: "(c)",
+      text: "Explain how the mass of the segment affects the thrust required in manual mobilisation, and what this means for a slim and a heavily built patient with equally stiff elbows.",
+      marks: 3,
+      answer: "By the second law, <b>a = F/m</b>: for a given force, a smaller mass accelerates more. The thrust needed therefore <b>depends on the mass of the individual</b> — the heavier patient needs <b>more thrust</b> for the same acceleration. Skill improves technique but does not remove the mass difference, so the <b>slim patient gains range more quickly</b> with the same applied force."
+    }
+  ]
+}
+];
+
+var B_TOTAL = SECTION_B.reduce(function(s, q){
+  return s + q.parts.reduce(function(x, p){ return x + p.marks; }, 0);
+}, 0);
+
+/* =========================================================
+   ICONS
+   ========================================================= */
+var ICON_CHECK = '<svg class="mk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+var ICON_CROSS = '<svg class="mk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
+var ICON_ARROW = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
+var ICON_CHEV  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
+var ICON_TROPHY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg>';
+var ICON_TARGET = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4"/></svg>';
+var ICON_BOOK  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 0-2 2z"/><path d="M4 19a2 2 0 0 1 2-2h12"/></svg>';
+var ICON_PULSE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>';
+var SUN_INNER  = '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>';
+var MOON_INNER = '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>';
+
+/* =========================================================
+   HELPERS
+   ========================================================= */
+function $(id){ return document.getElementById(id); }
+var LETTERS = 'ABCD';
+var TOTAL = SECTION_A.length;
+var MAX_MARKS = SECTION_A.reduce(function(s, q){ return s + q.pts; }, 0);
+
+/* =========================================================
+   STATE
+   ========================================================= */
+var idx = 0;
+var answers = new Array(TOTAL).fill(null);
+var examStarted = false;
+var examFinished = false;
+var endAt = 0;
+var lastSec = -1;
+var rafId = null;
+
+var SCREENS = { start: 'screenStart', exam: 'screenExam', results: 'screenResults', b: 'screenB', lb: 'screenLb' };
+
+/* =========================================================
+   SCREEN SWITCHING
+   ========================================================= */
+function showScreen(name){
+  Object.keys(SCREENS).forEach(function(k){
+    var el = $(SCREENS[k]);
+    if (el) el.classList.remove('active');
+  });
+  var target = $(SCREENS[name]);
+  if (target) target.classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+/* =========================================================
+   THEME
+   ========================================================= */
+function setTheme(t){
+  document.documentElement.setAttribute('data-theme', t);
+  var dark = (t === 'dark');
+  var inner = dark ? SUN_INNER : MOON_INNER;
+  var i1 = $('themeIcon');
+  var i2 = $('themeIcon2');
+  var i3 = $('themeIcon3');
+  if (i1) i1.innerHTML = inner;
+  if (i2) i2.innerHTML = inner;
+  if (i3) i3.innerHTML = inner;
+  if (window.__refreshVectors) window.__refreshVectors();
+}
+function toggleTheme(){
+  var cur = document.documentElement.getAttribute('data-theme');
+  setTheme(cur === 'dark' ? 'light' : 'dark');
+}
+
+/* =========================================================
+   TIMER
+   ========================================================= */
+function fmt(sec){
+  var s = Math.max(0, Math.floor(sec));
+  var m = Math.floor(s / 60);
+  var r = s % 60;
+  return String(m).padStart(2, '0') + ':' + String(r).padStart(2, '0');
+}
+
+function startTimer(){
+  endAt = Date.now() + CONFIG.totalTime * 1000;
+  lastSec = -1;
+  tick();
+}
+
+function tick(){
+  var leftMs = Math.max(0, endAt - Date.now());
+  var sec = Math.ceil(leftMs / 1000);
+  var pct = Math.max(0, Math.min(100, leftMs / (CONFIG.totalTime * 1000) * 100));
+
+  var timerEl = $('timer');
+  var fillEl  = $('timerFill');
+  if (sec !== lastSec && timerEl){ timerEl.textContent = fmt(sec); lastSec = sec; }
+  if (fillEl) fillEl.style.width = pct + '%';
+
+  var warn = pct <= 30 && pct > 10;
+  var danger = pct <= 10;
+  if (timerEl){
+    timerEl.classList.toggle('warn', warn);
+    timerEl.classList.toggle('danger', danger);
+  }
+  if (fillEl){
+    fillEl.classList.toggle('warn', warn);
+    fillEl.classList.toggle('danger', danger);
+  }
+
+  if (leftMs <= 0){ finishExam(); return; }
+  rafId = requestAnimationFrame(tick);
+}
+
+/* =========================================================
+   CHROME
+   ========================================================= */
+function currentScore(){
+  return answers.reduce(function(s, v, i){
+    return s + (v !== null && v === SECTION_A[i].ans ? SECTION_A[i].pts : 0);
+  }, 0);
+}
+
+function updateChrome(){
+  var scoreEl = $('scoreStat');
+  var countEl = $('qCount');
+  var fillEl  = $('qFill');
+  if (scoreEl) scoreEl.textContent = currentScore() + ' pts';
+  if (countEl) countEl.textContent = 'Question ' + (idx + 1) + ' of ' + TOTAL;
+  if (fillEl) fillEl.style.width = ((idx + 1) / TOTAL * 100) + '%';
+  var stEl = $('streakStat'), anEl = $('answeredStat');
+  var run = 0, best = 0, done = 0;
+  for (var k = 0; k < TOTAL; k++){
+    if (answers[k] === null) continue;
+    done++;
+    if (answers[k] === SECTION_A[k].ans){ run++; if (run > best) best = run; } else { run = 0; }
+  }
+  if (stEl) stEl.textContent = 'Streak ' + run + ' (best ' + best + ')';
+  if (anEl) anEl.textContent = 'Answered ' + done + '/' + TOTAL;
+}
+
+/* =========================================================
+   QUESTION RENDER
+   ========================================================= */
+function renderQuestion(){
+  var q = SECTION_A[idx];
+  var area = $('qArea');
+  if (!area || !q) return;
+
+  var optsHtml = '';
+  for (var i = 0; i < q.opts.length; i++){
+    optsHtml += '<button class="opt" type="button" data-i="' + i + '">' +
+                  '<span class="ltr">' + LETTERS.charAt(i) + '</span>' +
+                  '<span class="txt">' + q.opts[i] + '</span>' +
+                '</button>';
+  }
+
+  area.innerHTML =
+    '<div class="card-wrap">' +
+      '<div class="glass-card">' +
+        '<div class="sheen"></div>' +
+        '<div class="thickness"></div>' +
+        '<div class="card-body">' +
+          '<div class="qhead">' +
+            '<span class="badge">SECTION A</span>' +
+            '<span class="topic">' + q.topic + '</span>' +
+          '</div>' +
+          '<p class="qtext"><span class="qnum">' + (idx + 1) + '.</span>' + q.q + '</p>' +
+          '<div class="opts">' + optsHtml + '</div>' +
+          '<div class="explain"><div class="explain-in">' +
+            '<span class="ex-h">WHY</span>' +
+            '<p>' + q.explain + '</p>' +
+          '</div></div>' +
+          '<button class="next-btn" id="nextBtn" type="button"></button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+
+  var btns = area.querySelectorAll('.opt');
+  for (var j = 0; j < btns.length; j++){
+    (function(btn){
+      btn.addEventListener('click', function(){
+        choose(parseInt(btn.getAttribute('data-i'), 10));
+      });
+    })(btns[j]);
+  }
+
+  var next = $('nextBtn');
+  if (next){
+    next.innerHTML = (idx === TOTAL - 1 ? 'Submit &amp; See Results' : 'Next') + ICON_ARROW;
+    next.addEventListener('click', onNext);
+  }
+
+  updateChrome();
+  if (answers[idx] !== null) revealAnswer(answers[idx]);
+}
+
+function choose(i){
+  if (answers[idx] !== null || examFinished) return;
+  answers[idx] = i;
+  revealAnswer(i);
+  updateChrome();
+}
+
+function revealAnswer(chosen){
+  var q = SECTION_A[idx];
+  var btns = document.querySelectorAll('#qArea .opt');
+  for (var j = 0; j < btns.length; j++){
+    var b = btns[j];
+    b.disabled = true;
+    b.classList.remove('correct', 'wrong');
+    if (j === q.ans){
+      b.classList.add('correct');
+      b.insertAdjacentHTML('beforeend', ICON_CHECK);
+    } else if (j === chosen){
+      b.classList.add('wrong');
+      b.insertAdjacentHTML('beforeend', ICON_CROSS);
+    }
+  }
+  var ex = document.querySelector('#qArea .explain');
+  if (ex){
+    requestAnimationFrame(function(){ ex.classList.add('show'); });
+  }
+  var nb = $('nextBtn');
+  if (nb) nb.classList.add('visible');
+}
+
+function onNext(){
+  if (idx === TOTAL - 1){ finishExam(); return; }
+  idx += 1;
+  renderQuestion();
+  window.scrollTo(0, 0);
+}
+
+/* =========================================================
+   RESULTS
+   ========================================================= */
+var TOPIC_ADVICE = {
+  "Newton's Laws — Core Concepts": "revise which law the lecturer attached to each of the three tasks — range of motion restoration, injury mechanism and level of muscle tension — because that mapping is the backbone of the lecture.",
+  "Whiplash Mechanism": "re-read the acceleration and deceleration patterns and which structures are stretched versus compressed in each, then test yourself on the two conditions required for classic whiplash.",
+  "Clinical Assessment": "revisit the subjective assessment points, especially seating position and how the collision happened, and the difference between a physical and a medical diagnosis.",
+  "Exercise Prescription": "go back over the exercise staircase — passive, active-assisted, active, resisted — and when electrical stimulation or massage is used to overcome muscle inertia.",
+  "Clinical Application — Mass & Force": "practise reasoning about mass, force and acceleration clinically: why the same thrust produces a different acceleration in a slim and a heavily built segment.",
+  "Muscle Action": "review concentric versus eccentric contraction, and remember that eccentric work is deceleration and checking of the agonist, never 'negative'.",
+  "Balance & Postural Control": "revise internal versus external balance, the line of gravity within the base of support, and the antigravity muscle groups."
+};
+
+function finishExam(){
+  if (examFinished) return;
+  examFinished = true;
+  if (rafId) cancelAnimationFrame(rafId);
+
+  var score = currentScore();
+  var pct = Math.round(score / MAX_MARKS * 100);
+
+  if (window.__onQuizFinished){
+    var correctCount = 0;
+    answers.forEach(function(v, i){ if (v !== null && v === SECTION_A[i].ans) correctCount++; });
+    try { window.__onQuizFinished({ score: score, correct: correctCount, total: TOTAL }); } catch (e) { /* never block results */ }
+  }
+
+  showScreen('results');
+
+  $('resScore').textContent = score + ' / ' + MAX_MARKS;
+  $('resPct').textContent = pct + '% correct';
+
+  var grade, cls, icon;
+  if (pct >= 80){ grade = 'Distinction'; cls = 'distinction'; icon = ICON_TROPHY; }
+  else if (pct >= 65){ grade = 'Credit'; cls = 'credit'; icon = ICON_TARGET; }
+  else if (pct >= 50){ grade = 'Pass'; cls = 'pass'; icon = ICON_BOOK; }
+  else { grade = 'Keep Studying'; cls = 'fail'; icon = ICON_PULSE; }
+
+  var gb = $('gradeBadge');
+  gb.className = 'grade-badge ' + cls;
+  gb.innerHTML = icon + '<span>' + grade + '</span>';
+
+  /* Topic breakdown */
+  var map = {};
+  SECTION_A.forEach(function(q, i){
+    if (!map[q.topic]) map[q.topic] = { correct: 0, total: 0 };
+    map[q.topic].total += q.pts;
+    if (answers[i] === q.ans) map[q.topic].correct += q.pts;
+  });
+
+  var list = $('topicList');
+  list.innerHTML = '';
+  var keys = Object.keys(map);
+  keys.forEach(function(k){
+    var d = map[k];
+    var p = Math.round(d.correct / d.total * 100);
+    var col = p >= 70 ? 'good' : (p >= 50 ? 'mid' : 'low');
+    var row = document.createElement('div');
+    row.className = 'topic-row';
+    row.innerHTML =
+      '<div class="topic-head"><span class="topic-name">' + k + '</span>' +
+      '<span class="topic-val">' + d.correct + '/' + d.total + '</span></div>' +
+      '<div class="tbar"><div class="tbar-fill ' + col + '"></div></div>';
+    list.appendChild(row);
+    var fill = row.querySelector('.tbar-fill');
+    setTimeout(function(){ fill.style.width = p + '%'; }, 140);
+  });
+
+  /* Advice */
+  var weakest = keys.map(function(k){
+    return { k: k, p: map[k].correct / map[k].total };
+  }).sort(function(a, b){ return a.p - b.p; });
+
+  var advice;
+  if (weakest.length && weakest[0].p < 0.8){
+    advice = 'Your weakest area is ' + weakest[0].k + ' — ' +
+      (TOPIC_ADVICE[weakest[0].k] || 're-read that part of the lecture.');
+    if (weakest[1] && weakest[1].p < 0.6){
+      advice += ' Also spend time on ' + weakest[1].k + ': ' +
+        (TOPIC_ADVICE[weakest[1].k] || 'revise the lecture notes.');
+    }
+  } else {
+    advice = 'No weak topic stands out — every area is above the 80% mark. Run the paper once more under time pressure to confirm the result holds.';
+  }
+  $('advice').textContent = advice;
+
+  /* Potential statement */
+  var pot;
+  if (pct >= 80) pot = 'At this level you are answering like someone who has already internalised the lecture. Hold it with one timed re-run before the paper.';
+  else if (pct >= 65) pot = 'You have the structure of the lecture; the marks you are losing sit in a small number of topics, and those are fixable in one focused revision block.';
+  else if (pct >= 50) pot = 'The foundations are there but the application questions are slipping. Another pass over the lecture plus this paper should move you comfortably into credit.';
+  else pot = 'There is real ground to cover, but the lecture is short and the question set is compact. One honest revision cycle will change this score substantially.';
+  $('potential').textContent = pot;
+
+  if (pct >= 65) burstConfetti();
+}
+
+function burstConfetti(){
+  var cs = getComputedStyle(document.documentElement);
+  var colors = [
+    cs.getPropertyValue('--accent-1').trim() || '#FF6B35',
+    cs.getPropertyValue('--accent-2').trim() || '#4FC3F7',
+    cs.getPropertyValue('--accent-3').trim() || '#FF3B57'
+  ];
+  for (var i = 0; i < 60; i++){
+    var el = document.createElement('div');
+    el.className = 'confetti';
+    el.style.left = (Math.random() * 100) + 'vw';
+    el.style.background = colors[i % 3];
+    el.style.animationDelay = (Math.random() * 0.55) + 's';
+    el.style.animationDuration = (2.1 + Math.random() * 1.7) + 's';
+    el.style.width = (5 + Math.random() * 6) + 'px';
+    el.style.height = (9 + Math.random() * 9) + 'px';
+    if (i % 2) el.style.borderRadius = '50%';
+    document.body.appendChild(el);
+    (function(node){ setTimeout(function(){ node.remove(); }, 4800); })(el);
+  }
+}
+
+/* =========================================================
+   SECTION B
+   ========================================================= */
+function renderSectionB(){
+  var area = $('bArea');
+  if (!area) return;
+
+  var html = '<div class="b-tally">' +
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg>' +
+    '<span id="bTally">Self-marked: 0 / ' + B_TOTAL + '</span></div>';
+
+  SECTION_B.forEach(function(q, qi){
+    html += '<div class="card-wrap b-block"><div class="glass-card">' +
+      '<div class="sheen"></div><div class="thickness"></div>' +
+      '<div class="card-body">' +
+        '<div class="qhead"><span class="badge">SECTION B</span>' +
+        '<span class="topic">' + q.marks + ' MARKS</span></div>' +
+        '<h3 class="b-title">' + q.title + '</h3>' +
+        '<p class="b-context">' + q.context + '</p>';
+
+    q.parts.forEach(function(p, pi){
+      html +=
+        '<div class="part">' +
+          '<div class="part-head"><span class="plabel">' + p.label + '</span>' +
+          '<span class="pmarks">' + p.marks + ' MARK' + (p.marks > 1 ? 'S' : '') + '</span></div>' +
+          '<p class="ptext">' + p.text + '</p>' +
+          '<button class="reveal-btn" data-q="' + qi + '" data-p="' + pi + '" type="button">' +
+            '<span>Show Model Answer</span>' + ICON_CHEV + '</button>' +
+          '<div class="model" id="model-' + qi + '-' + pi + '"><div class="model-in">' + p.answer + '</div></div>' +
+          '<label class="selfmark"><input type="checkbox" data-marks="' + p.marks + '"><span>I got this right</span></label>' +
+        '</div>';
+    });
+
+    html += '</div></div></div>';
+  });
+
+  area.innerHTML = html;
+
+  /* Model answer toggles */
+  var revealBtns = area.querySelectorAll('.reveal-btn');
+  for (var i = 0; i < revealBtns.length; i++){
+    (function(btn){
+      btn.addEventListener('click', function(){
+        var q = btn.getAttribute('data-q');
+        var p = btn.getAttribute('data-p');
+        var m = $('model-' + q + '-' + p);
+        var label = btn.querySelector('span');
+        if (!m) return;
+        var open = m.classList.toggle('show');
+        btn.classList.toggle('open', open);
+        if (label) label.textContent = open ? 'Hide Model Answer' : 'Show Model Answer';
+      });
+    })(revealBtns[i]);
+  }
+
+  /* Self-mark checkboxes */
+  var checks = area.querySelectorAll('.selfmark input');
+  for (var c = 0; c < checks.length; c++){
+    (function(cb){
+      cb.addEventListener('change', function(){
+        var wrap = cb.closest ? cb.closest('.selfmark') : cb.parentNode;
+        if (wrap) wrap.classList.toggle('checked', cb.checked);
+        updateTally();
+      });
+    })(checks[c]);
+  }
+
+  updateTally();
+}
+
+function updateTally(){
+  var got = 0;
+  var checks = document.querySelectorAll('#bArea .selfmark input');
+  for (var i = 0; i < checks.length; i++){
+    if (checks[i].checked) got += parseInt(checks[i].getAttribute('data-marks'), 10);
+  }
+  var t = $('bTally');
+  if (t){
+    t.textContent = 'Self-marked: ' + got + ' / ' + B_TOTAL +
+      '   ·   Combined: ' + (currentScore() + got) + ' / ' + (MAX_MARKS + B_TOTAL);
+  }
+}
+
+/* =========================================================
+   CANVAS — FORCE VECTOR FIELD
+   ========================================================= */
+function initCanvas(){
+  var cv = $('bg');
+  if (!cv || !cv.getContext) return;
+  var ctx = cv.getContext('2d');
+  var W = 0, H = 0, dpr = 1, vecs = [];
+
+  function palette(){
+    var light = document.documentElement.getAttribute('data-theme') === 'light';
+    return light
+      ? ['#E4551F', '#0E7FB8', '#33425A', '#E4551F']
+      : ['#FF6B35', '#4FC3F7', '#EAF1F8', '#FF6B35'];
+  }
+
+  function resize(){
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = cv.width  = Math.floor(window.innerWidth * dpr);
+    H = cv.height = Math.floor(window.innerHeight * dpr);
+    cv.style.width  = window.innerWidth + 'px';
+    cv.style.height = window.innerHeight + 'px';
+  }
+
+  function make(){
+    var c = palette();
+    return {
+      x: Math.random() * W,
+      y: Math.random() * H,
+      a: Math.random() * Math.PI * 2,
+      sp: (0.5 + Math.random() * 1.7) * dpr,
+      len: 0,
+      max: (40 + Math.random() * 170) * dpr,
+      life: 1,
+      c: c[Math.floor(Math.random() * c.length)],
+      w: (0.7 + Math.random() * 1.4) * dpr
+    };
+  }
+
+  function init(){
+    vecs = [];
+    var n = Math.round(Math.min(52, Math.max(24, window.innerWidth / 14)));
+    for (var i = 0; i < n; i++){
+      var v = make();
+      v.len = Math.random() * v.max;
+      vecs.push(v);
+    }
+  }
+
+  function frame(){
+    ctx.clearRect(0, 0, W, H);
+    ctx.lineCap = 'round';
+    for (var i = 0; i < vecs.length; i++){
+      var v = vecs[i];
+      v.x += Math.cos(v.a) * v.sp;
+      v.y += Math.sin(v.a) * v.sp;
+      v.len = Math.min(v.max, v.len + v.sp * 1.5);
+      v.life -= 0.0035;
+
+      var tx = v.x - Math.cos(v.a) * v.len;
+      var ty = v.y - Math.sin(v.a) * v.len;
+
+      ctx.globalAlpha = Math.max(0, v.life) * 0.55;
+      ctx.strokeStyle = v.c;
+      ctx.lineWidth = v.w;
+      ctx.beginPath();
+      ctx.moveTo(tx, ty);
+      ctx.lineTo(v.x, v.y);
+      ctx.stroke();
+
+      ctx.globalAlpha = Math.max(0, v.life) * 0.85;
+      ctx.fillStyle = v.c;
+      ctx.beginPath();
+      ctx.arc(v.x, v.y, v.w * 1.3, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (v.life <= 0 || v.x < -240 || v.x > W + 240 || v.y < -240 || v.y > H + 240){
+        var nv = make();
+        for (var k in nv) if (nv.hasOwnProperty(k)) v[k] = nv[k];
+      }
+    }
+    ctx.globalAlpha = 1;
+    requestAnimationFrame(frame);
+  }
+
+  resize();
+  init();
+  requestAnimationFrame(frame);
+
+  window.__refreshVectors = init;
+  window.addEventListener('resize', function(){ resize(); init(); });
+}
+
+/* =========================================================
+   HOOKS FOR THE MULTIPLAYER LAYER
+   ========================================================= */
+window.__QUIZ_API = {
+  start: function(){
+    if (examStarted) return;
+    examStarted = true;
+    showScreen('exam');
+    renderQuestion();
+    startTimer();
+  },
+  show: showScreen,
+  maxMarks: MAX_MARKS,
+  total: TOTAL,
+  timeLimit: CONFIG.totalTime
+};
+
+/* =========================================================
+   BOOT
+   ========================================================= */
+function boot(){
+  /* canvas */
+  try { initCanvas(); } catch (e) { /* canvas failure must never block the exam */ }
+
+  /* theme buttons */
+  var tb1 = $('themeBtn');
+  var tb2 = $('themeBtn2');
+  if (tb1) tb1.addEventListener('click', toggleTheme);
+  if (tb2) tb2.addEventListener('click', toggleTheme);
+  var tb3 = $('themeBtn3');
+  if (tb3) tb3.addEventListener('click', toggleTheme);
+
+  /* begin */
+  var begin = $('beginBtn');
+  if (begin){
+    begin.addEventListener('click', function(){
+      if (examStarted) return;
+      if (window.__requestStart) window.__requestStart();
+    });
+  }
+
+  /* results actions */
+  var lbBtn = $('lbBtn');
+  if (lbBtn) lbBtn.addEventListener('click', function(){ if (window.__openLeaderboard) window.__openLeaderboard('results'); });
+
+  var toB = $('toBBtn');
+  if (toB) toB.addEventListener('click', function(){
+    renderSectionB();
+    showScreen('b');
+  });
+
+  var back = $('backBtn');
+  if (back) back.addEventListener('click', function(){ showScreen('results'); });
+
+  /* initial timer display */
+  var timerEl = $('timer');
+  if (timerEl) timerEl.textContent = fmt(CONFIG.totalTime);
+
+  /* initial theme icon */
+  setTheme((window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) ? 'light' : 'dark');
+}
+
+if (document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', boot);
+} else {
+  boot();
+}
+
+})();
+</script>
+
+<script>
+/* =========================================================
+   MULTIPLAYER LAYER  (Firebase Auth + Firestore)
+   Talks to the quiz only through window.__QUIZ_API,
+   window.__requestStart, window.__onQuizFinished and
+   window.__openLeaderboard.
+   ========================================================= */
+(function(){
+'use strict';
+
+var Q = window.__QUIZ_API;
+if (!Q) return;
+
+/* ---------- helpers ---------- */
+var P = {
+  user:   '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+  out:    '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>',
+  board:  '<path d="M5 20v-6M12 20V6M19 20v-10"/>',
+  retry:  '<path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/>',
+  clock:  '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  done:   '<circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/>',
+  alert:  '<circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5v.01"/>',
+  trash:  '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
+  next:   '<path d="M9 6l6 6-6 6"/>',
+  spin:   '<path d="M21 12a9 9 0 1 1-6.2-8.55"/>',
+  back:   '<path d="M19 12H5M11 18l-6-6 6-6"/>',
+  arrow:  '<path d="M5 12h14M13 6l6 6-6 6"/>'
+};
+function $(id){ return document.getElementById(id); }
+function esc(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+    return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+  });
+}
+function ic(key, cls){
+  return '<svg' + (cls ? ' class="' + cls + '"' : '') +
+    ' viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    P[key] + '</svg>';
+}
+function num(v){ v = Number(v); return isFinite(v) ? String(v) : '0'; }
+function withTimeout(p, ms){
+  return new Promise(function(resolve, reject){
+    var t = setTimeout(function(){ reject({ code:'timeout', message:'timeout' }); }, ms);
+    p.then(function(v){ clearTimeout(t); resolve(v); }, function(e){ clearTimeout(t); reject(e); });
+  });
+}
+function fmtDur(ms){
+  var s = Math.max(0, Math.round(ms / 1000));
+  var h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), r = s % 60;
+  return (h ? h + ':' + String(m).padStart(2, '0') : String(m)) + ':' + String(r).padStart(2, '0');
+}
+function fmtClock(ms){
+  try { return new Date(ms).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }); }
+  catch (e) { return ''; }
+}
+function btn(kind, key, iconKey, label){
+  return '<button class="' + kind + '" type="button" data-mp="' + key + '">' + ic(iconKey) + label + '</button>';
+}
+function panel(iconKey, cls, title, msg, errText){
+  return '<div class="mp-panel"><div class="mp-row">' + ic(iconKey, 'mp-ic ' + (cls || '')) +
+    '<div class="mp-title">' + title + '</div></div>' +
+    (msg ? '<div class="mp-msg">' + msg + '</div>' : '') +
+    (errText ? '<div class="mp-err">' + esc(errText) + '</div>' : '') + '</div>';
+}
+function authMsg(e){
+  var c = (e && e.code) || '';
+  if (c === 'auth/popup-blocked') return 'Your browser blocked the sign-in window. Allow pop-ups for this site, then tap Sign in again.';
+  if (c === 'auth/popup-closed-by-user' || c === 'auth/cancelled-popup-request') return 'The sign-in window was closed before it finished. Tap Sign in to try again.';
+  if (c === 'auth/unauthorized-domain') return 'This web address is not authorized in Firebase. The host must add it under Authentication, Settings, Authorized domains.';
+  if (c === 'auth/network-request-failed') return 'Network problem. Check your connection and try again.';
+  if (c === 'auth/operation-not-allowed') return 'Google sign-in is not enabled in the Firebase project yet.';
+  return 'Sign-in failed' + (c ? ' (' + c + ')' : '') + '. Try again.';
+}
+function dbMsg(e){
+  var c = (e && e.code) || '';
+  if (c === 'permission-denied') return 'The scoreboard refused this request (permission denied). The host needs to publish the Firestore rules.';
+  if (c === 'timeout' || c === 'unavailable' || c === 'offline' || c === 'aborted' || c === 'deadline-exceeded' || c === 'failed-precondition')
+    return 'Could not reach the scoreboard. Check your connection and try again.';
+  return 'Something went wrong' + (c ? ' (' + c + ')' : '') + '.';
+}
+
+/* ---------- state ---------- */
+var fb = null, auth = null, db = null;
+var me = null;            /* { uid, name, isOwner } */
+var authSeq = 0;
+var starting = false, playing = false, saving = false;
+var pending = null, saveState = '', saveErr = '';
+var guardOn = false;
+var lb = { tab:'this', quizId:null, title:'', back:'start', unsub:null, timer:null,
+           loaded:false, slow:false, err:'', fin:[], play:[], fromList:false };
+var listSeq = 0;
+
+function myRef(){ return fb.doc(db, 'quizzes', QUIZ_ID, 'players', me.uid); }
+
+/* ---------- start-screen gate ---------- */
+function setGate(top, after, showBegin){
+  $('mpGate').innerHTML = top || '';
+  $('mpGateAfter').innerHTML = after || '';
+  $('beginBtn').hidden = !showBegin;
+}
+function chip(){
+  if (!me || !me.name) return '';
+  return '<div class="mp-panel mp-user">' + ic('user', 'mp-ic') +
+    '<span class="mp-uname">' + esc(me.name) + '</span>' +
+    '<button class="mp-link" type="button" data-mp="signout">Sign out</button></div>';
+}
+function gate(state, x){
+  var lbBtn = btn('btn-ghost', 'lb', 'board', 'Leaderboard');
+  switch (state){
+    case 'connecting':
+      setGate(panel('spin', 'mp-spin', 'Connecting...', 'Loading sign-in and the scoreboard.'), '', false); break;
+    case 'checking':
+      setGate(chip() + panel('spin', 'mp-spin', 'Checking your attempt...', 'Making sure the scoreboard is reachable.'), '', false); break;
+    case 'config':
+      setGate(panel('alert', 'warn', 'Setup needed', 'Paste your Firebase config and your email into the placeholders at the top of index.html.'), '', false); break;
+    case 'sdkerr':
+      setGate(panel('alert', 'bad', 'Could not load Firebase', 'Check your connection and retry. If you opened this link inside another app, open it in Chrome or Safari instead.'),
+              btn('btn-solid', 'boot', 'retry', 'Retry'), false); break;
+    case 'inituerr':
+      setGate(panel('alert', 'bad', 'Firebase setup problem', 'The Firebase config in this file looks wrong.', x || ''), btn('btn-solid', 'boot', 'retry', 'Retry'), false); break;
+    case 'signin':
+      setGate(panel('user', '', 'Sign in to play',
+                'Use your Google account. Your leaderboard name comes from it. If sign-in fails inside WhatsApp or another in-app browser, open this link in Chrome or Safari.', x || ''),
+              '<button class="cta" type="button" data-mp="signin">Sign in with Google' + ic('arrow') + '</button>', false); break;
+    case 'noname':
+      setGate(chip() + panel('alert', 'warn', 'Your Google account has no name',
+                'Add a name to your Google profile, then sign out and sign in again.'), '', false); break;
+    case 'unreachable':
+      setGate(chip() + panel('alert', 'warn', 'Cannot reach the scoreboard', 'You cannot start until it is reachable.', x || ''),
+              btn('btn-solid', 'recheck', 'retry', 'Try again'), false); break;
+    case 'denied':
+      setGate(chip() + panel('alert', 'bad', 'Access denied',
+                'The database rules blocked this request. The host needs to publish the Firestore rules and authorize this web address.'),
+              btn('btn-solid', 'recheck', 'retry', 'Try again'), false); break;
+    case 'ready':
+      setGate(chip() + (x ? panel('alert', 'warn', 'Could not start', '', x) : ''), lbBtn, true); break;
+    case 'starting':
+      setGate(chip() + panel('spin', 'mp-spin', 'Starting...', 'Saving your start time to the scoreboard.'), '', true); break;
+    case 'done': {
+      var d = x || {}, t = '';
+      try { t = fmtDur(d.finishedAt.toMillis() - d.startedAt.toMillis()); } catch (e) {}
+      setGate(chip() + panel('done', '', 'You have already played',
+                'Final score ' + num(d.score) + ' / ' + num(Q.maxMarks) + ' · ' + num(d.correct) + ' of ' + num(d.total) + ' correct' +
+                (t ? ' · time ' + t : '') + '. Each account gets one attempt.'), lbBtn, false); break;
+    }
+    case 'inprogress':
+      setGate(chip() + panel('alert', 'warn', 'Attempt in progress',
+                'This account already started the quiz. Each account gets one attempt, so it cannot be restarted. If you finished, your score shows once it saves. If something went wrong, ask the host to reset scores.'),
+              lbBtn, false); break;
+  }
+}
+
+/* ---------- SDK + auth ---------- */
+function configMissing(){
+  var c = FIREBASE_CONFIG || {};
+  return !c.apiKey || String(c.apiKey).indexOf('PASTE') === 0 ||
+         !c.projectId || String(c.projectId).indexOf('PASTE') === 0 ||
+         !OWNER_EMAIL || String(OWNER_EMAIL).indexOf('PASTE') === 0;
+}
+async function loadSdk(){
+  var base = 'https://www.gstatic.com/firebasejs/' + FIREBASE_SDK_VERSION + '/';
+  var mods = await Promise.all([
+    import(base + 'firebase-app.js'),
+    import(base + 'firebase-auth.js'),
+    import(base + 'firebase-firestore.js')
+  ]);
+  fb = Object.assign({}, mods[0], mods[1], mods[2]);
+}
+var booted = false;
+async function boot(){
+  gate('connecting');
+  if (configMissing()){ gate('config'); return; }
+  if (!fb){
+    try { await loadSdk(); } catch (e){ gate('sdkerr'); return; }
+  }
+  if (!booted){
+    try {
+      var app = fb.initializeApp(FIREBASE_CONFIG);
+      auth = fb.getAuth(app);
+      db = fb.initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
+    } catch (e){ gate('inituerr', (e && e.message) || ''); return; }
+    booted = true;
+    fb.onAuthStateChanged(auth, function(user){ onUser(user); }, function(){ gate('signin', 'Could not restore your sign-in. Tap Sign in.'); });
+  } else if (auth) {
+    onUser(auth.currentUser);
+  }
+}
+function signInPopup(){
+  var provider = new fb.GoogleAuthProvider();
+  provider.setCustomParameters({ prompt:'select_account' });
+  return fb.signInWithPopup(auth, provider);
+}
+async function doSignIn(){
+  var b = document.querySelector('[data-mp="signin"]');
+  if (b) b.disabled = true;
+  try { await signInPopup(); }
+  catch (e){ gate('signin', authMsg(e)); }
+}
+
+async function onUser(user){
+  var seq = ++authSeq;
+  if (playing) return;                 /* never swap identity mid-quiz */
+  if (!user){ me = null; gate('signin'); return; }
+  gate('checking');
+  var tr;
+  try { tr = await user.getIdTokenResult(); }
+  catch (e){ if (seq === authSeq) gate('unreachable', dbMsg(e)); return; }
+  if (seq !== authSeq) return;
+  var name = (tr.claims && typeof tr.claims.name === 'string') ? tr.claims.name : '';
+  var email = String(user.email || '').toLowerCase();
+  me = { uid: user.uid, name: name,
+         isOwner: !!(user.emailVerified && email && email === String(OWNER_EMAIL).toLowerCase()) };
+  if (!name.trim()){ gate('noname'); return; }
+  try {
+    var snap = await withTimeout(fb.getDocFromServer(myRef()), 10000);
+    if (seq !== authSeq) return;
+    if (snap.exists()){
+      var d = snap.data();
+      if (d.status === 'finished') gate('done', d); else gate('inprogress');
+    } else {
+      gate('ready');
+    }
+    ensureQuizDoc();
+  } catch (e){
+    if (seq !== authSeq) return;
+    if (e && e.code === 'permission-denied') gate('denied'); else gate('unreachable', dbMsg(e));
+  }
+}
+
+async function ensureQuizDoc(){
+  try {
+    var r = fb.doc(db, 'quizzes', QUIZ_ID);
+    var s = await fb.getDoc(r);
+    if (!s.exists() || (me.isOwner && s.data().title !== QUIZ_TITLE)){
+      await fb.setDoc(r, { title: QUIZ_TITLE, updatedAt: fb.serverTimestamp() }, { merge: true });
+    }
+  } catch (e) { /* best effort: the quiz still works without the title document */ }
+}
+
+/* ---------- start / finish ---------- */
+function setGuard(on){
+  function g(e){ e.preventDefault(); e.returnValue = ''; return ''; }
+  if (on && !guardOn){ window.__mpGuard = g; window.addEventListener('beforeunload', g); guardOn = true; }
+  else if (!on && guardOn){ window.removeEventListener('beforeunload', window.__mpGuard); guardOn = false; }
+}
+
+async function requestStart(){
+  if (starting || playing || !me || !fb) return;
+  starting = true;
+  $('beginBtn').disabled = true;
+  gate('starting');
+  try {
+    if (!navigator.onLine) throw { code:'offline' };
+    await withTimeout(fb.runTransaction(db, async function(tx){
+      var ref = myRef();
+      var s = await tx.get(ref);
+      if (s.exists()){ var ex = new Error('exists'); ex.code = 'already-used'; throw ex; }
+      tx.set(ref, { uid: me.uid, name: me.name, status: 'started', startedAt: fb.serverTimestamp() });
+    }), 15000);
+  } catch (e){
+    starting = false;
+    $('beginBtn').disabled = false;
+    if (e && e.code === 'already-used'){ gate('inprogress'); return; }
+    gate('ready', dbMsg(e));
+    return;
+  }
+  starting = false;
+  playing = true;
+  setGuard(true);
+  $('beginBtn').disabled = false;
+  Q.start();
+}
+
+function renderSave(){
+  var el = $('mpSave'); if (!el) return;
+  if (saveState === 'saving'){
+    el.innerHTML = '<div class="mp-panel mp-row">' + ic('spin', 'mp-ic mp-spin') + '<span>Saving your score...</span></div>';
+  } else if (saveState === 'saved'){
+    el.innerHTML = '<div class="mp-panel mp-row">' + ic('done', 'mp-ic') + '<span>Score saved to the leaderboard.</span></div>';
+  } else if (saveState === 'error'){
+    el.innerHTML = '<div class="mp-panel"><div class="mp-row">' + ic('alert', 'mp-ic bad') + '<span>' + esc(saveErr) + '</span></div>' +
+      '<div class="mp-btns">' + btn('btn-solid', 'retry-save', 'retry', 'Retry saving') + '</div></div>';
+  } else { el.innerHTML = ''; }
+}
+
+async function trySave(fromTap){
+  if (saving || !pending || !fb) return;
+  saving = true; saveState = 'saving'; renderSave();
+  var r = pending;
+  try {
+    if (!auth.currentUser){
+      if (!fromTap) throw { code:'signed-out' };
+      var cred = await signInPopup();
+      if (!cred.user || cred.user.uid !== me.uid){
+        try { await fb.signOut(auth); } catch (e2) {}
+        throw { code:'wrong-account' };
+      }
+    } else if (auth.currentUser.uid !== me.uid){
+      throw { code:'wrong-account' };
+    }
+    await withTimeout(fb.runTransaction(db, async function(tx){
+      var ref = myRef();
+      var s = await tx.get(ref);
+      if (!s.exists()){ var m = new Error('missing'); m.code = 'missing-start'; throw m; }
+      if (s.data().status === 'finished') return;      /* an earlier try already landed */
+      tx.update(ref, { status:'finished', score:r.score, correct:r.correct, total:r.total, finishedAt: fb.serverTimestamp() });
+    }), 15000);
+    saveState = 'saved'; pending = null; playing = false; setGuard(false);
+  } catch (e){
+    var c = e && e.code;
+    saveState = 'error';
+    if (c === 'signed-out') saveErr = 'You were signed out. Tap Retry to sign in again. Your result is kept on this page, do not close it.';
+    else if (c === 'wrong-account') saveErr = 'Sign in with the same Google account you started with (' + me.name + '). Your result is kept on this page, do not close it.';
+    else if (c === 'missing-start') saveErr = 'Your attempt record no longer exists (the host may have reset scores), so this result cannot be saved.';
+    else if (c && String(c).indexOf('auth/') === 0) saveErr = authMsg(e) + ' Your result is kept on this page, do not close it.';
+    else saveErr = dbMsg(e) + ' Your result is kept on this page, do not close it.';
+  }
+  saving = false;
+  renderSave();
+}
+
+/* ---------- leaderboard ---------- */
+function openLb(back){
+  lb.back = back || 'start';
+  Q.show('lb');
+  selectTab('this');
+}
+function selectTab(tab){
+  lb.tab = tab;
+  $('tabThis').classList.toggle('active', tab === 'this');
+  $('tabOthers').classList.toggle('active', tab === 'others');
+  if (tab === 'this') showBoard(QUIZ_ID, QUIZ_TITLE, false); else showQuizList();
+}
+function stopBoard(){
+  if (lb.unsub){ lb.unsub(); lb.unsub = null; }
+  clearTimeout(lb.timer);
+  listSeq++;
+}
+function cardShell(inner){
+  return '<div class="card-wrap"><div class="glass-card"><div class="sheen"></div><div class="thickness"></div>' +
+         '<div class="card-body">' + inner + '</div></div></div>';
+}
+function showBoard(id, title, fromList){
+  stopBoard();
+  lb.quizId = id; lb.title = title; lb.fromList = fromList;
+  lb.loaded = false; lb.slow = false; lb.err = ''; lb.fin = []; lb.play = [];
+  var readonly = id !== QUIZ_ID;
+  $('lbArea').innerHTML = cardShell(
+    (fromList ? '<button class="mp-link mp-backlink" type="button" data-mp="quizlist">All quizzes</button>' : '') +
+    '<div class="course-code">LEADERBOARD' + (readonly ? ' · READ ONLY' : '') + '</div>' +
+    '<h2 class="mp-lb-title">' + esc(title) + '</h2>' +
+    '<div id="lbStatus"></div><div id="lbFinished"></div><div id="lbPlaying"></div><div id="lbOwner"></div>');
+  renderOwner('');
+  paintStatus();
+  lb.timer = setTimeout(function(){ if (!lb.loaded && !lb.err){ lb.slow = true; paintStatus(); } }, 10000);
+  lb.unsub = fb.onSnapshot(fb.collection(db, 'quizzes', id, 'players'), { includeMetadataChanges: true },
+    function(snap){
+      lb.loaded = true; lb.err = '';
+      var fin = [], play = [];
+      snap.forEach(function(d){
+        var v = d.data({ serverTimestamps: 'estimate' });
+        if (!v || typeof v.name !== 'string' || !v.name.trim()) return;    /* never show an anonymous row */
+        if (v.status === 'finished' && v.startedAt && v.finishedAt){
+          fin.push({ id: d.id, v: v, ms: v.finishedAt.toMillis() - v.startedAt.toMillis() });
+        } else if (v.status === 'started' && v.startedAt){
+          play.push({ id: d.id, v: v, at: v.startedAt.toMillis() });
+        }
+      });
+      fin.sort(function(a, b){ return (Number(b.v.score) - Number(a.v.score)) || (a.ms - b.ms); });
+      play.sort(function(a, b){ return a.at - b.at; });
+      lb.fin = fin; lb.play = play;
+      paintStatus(); paintRows();
+    },
+    function(err){ lb.err = (err && err.code) || 'error'; paintStatus(); });
+}
+function paintStatus(){
+  var el = $('lbStatus'); if (!el) return;
+  var msg = '', cls = '';
+  if (lb.err === 'permission-denied'){ msg = 'Access denied. Sign in again, or ask the host to check the Firestore rules.'; cls = ' bad'; }
+  else if (lb.err){ msg = 'Could not load scores (' + esc(lb.err) + ').'; cls = ' bad'; }
+  else if (!navigator.onLine){ msg = lb.loaded ? 'You are offline. Showing the last scores received.' : 'You are offline. Scores will load when you reconnect.'; }
+  else if (!lb.loaded){ msg = lb.slow ? 'Still loading. Check your connection. This page keeps trying.' : 'Loading scores...'; }
+  el.innerHTML = msg ? '<div class="lb-state' + cls + '">' + msg + '</div>' : '';
+}
+function paintRows(){
+  var f = $('lbFinished'), p = $('lbPlaying'); if (!f || !p) return;
+  var h = '<div class="lb-sec">FINISHED</div>';
+  if (!lb.fin.length) h += '<div class="lb-empty">No finished attempts yet.</div>';
+  lb.fin.forEach(function(r, i){
+    var mine = me && r.id === me.uid;
+    h += '<div class="lb-row' + (mine ? ' me' : '') + (i < 3 ? ' r' + (i + 1) : '') + '">' +
+      '<span class="lb-rank">' + (i + 1) + '</span>' +
+      '<div class="lb-main"><div class="lb-name">' + esc(r.v.name) + (mine ? '<span class="lb-you">YOU</span>' : '') + '</div>' +
+      '<div class="lb-sub"><span>' + num(r.v.correct) + '/' + num(r.v.total) + ' correct</span>' + ic('clock') + '<span>' + fmtDur(r.ms) + '</span></div></div>' +
+      '<div class="lb-score">' + num(r.v.score) + '</div></div>';
+  });
+  f.innerHTML = h;
+  var limit = (Q.timeLimit || 0) * 1000 + 300000;
+  var g = '<div class="lb-sec">PLAYING NOW</div>';
+  if (!lb.play.length) g += '<div class="lb-empty">Nobody is playing right now.</div>';
+  lb.play.forEach(function(r){
+    var mine = me && r.id === me.uid;
+    var stale = limit > 300000 && (Date.now() - r.at) > limit;
+    g += '<div class="lb-row' + (mine ? ' me' : '') + '"><span class="lb-rank">' + ic('clock') + '</span>' +
+      '<div class="lb-main"><div class="lb-name">' + esc(r.v.name) + (mine ? '<span class="lb-you">YOU</span>' : '') + '</div>' +
+      '<div class="lb-sub"><span>Started ' + fmtClock(r.at) + (stale ? ' · did not finish' : '') + '</span></div></div><span></span></div>';
+  });
+  p.innerHTML = g;
+}
+
+async function showQuizList(){
+  stopBoard();
+  var my = ++listSeq;
+  $('lbArea').innerHTML = cardShell('<div class="course-code">LEADERBOARD</div><h2 class="mp-lb-title">Other quizzes</h2>' +
+    '<div id="qlStatus"><div class="lb-state">Loading quizzes...</div></div><div id="qlList"></div>');
+  try {
+    var snap = await withTimeout(fb.getDocs(fb.collection(db, 'quizzes')), 10000);
+    if (my !== listSeq) return;
+    var items = [];
+    snap.forEach(function(d){
+      var t = d.data() && typeof d.data().title === 'string' ? d.data().title : '';
+      items.push({ id: d.id, title: t || d.id });
+    });
+    items.sort(function(a, b){ return a.title.localeCompare(b.title); });
+    $('qlStatus').innerHTML = items.length ? '' : '<div class="lb-empty">No quizzes found yet.</div>';
+    $('qlList').innerHTML = items.map(function(it){
+      return '<button class="lb-quiz" type="button" data-mp="openquiz" data-id="' + esc(it.id) + '" data-title="' + esc(it.title) + '">' +
+        '<span class="qt"><b>' + esc(it.title) + '</b><small>' + esc(it.id) + (it.id === QUIZ_ID ? ' · this quiz' : '') + '</small></span>' + ic('next') + '</button>';
+    }).join('');
+  } catch (e){
+    if (my !== listSeq) return;
+    var denied = e && e.code === 'permission-denied';
+    $('qlStatus').innerHTML = '<div class="lb-state bad">' + esc(denied ? 'Access denied. Sign in again, or ask the host to check the Firestore rules.'
+      : (e && e.code === 'timeout' ? 'Still no answer. Check your connection and retry.' : dbMsg(e))) + '</div>' +
+      '<div class="mp-btns">' + btn('btn-ghost', 'quizlist', 'retry', 'Retry') + '</div>';
+  }
+}
+
+/* owner tools: the Firestore rules are the real protection */
+function renderOwner(mode, msg){
+  var el = $('lbOwner'); if (!el) return;
+  if (!(me && me.isOwner && lb.quizId === QUIZ_ID)){ el.innerHTML = ''; return; }
+  var h = '<div class="mp-owner">';
+  if (mode === 'confirm'){
+    h += panel('alert', 'bad', 'Delete all scores?', 'This removes every player document for this quiz only, including attempts in progress. It cannot be undone.') +
+      '<div class="mp-btns">' + btn('btn-solid mp-danger', 'reset-yes', 'trash', 'Delete all scores') + btn('btn-ghost', 'reset-no', 'back', 'Cancel') + '</div>';
+  } else if (mode === 'busy'){
+    h += panel('spin', 'mp-spin', 'Deleting...', esc(msg || ''));
+  } else {
+    h += btn('btn-ghost mp-danger', 'reset', 'trash', 'Reset all scores') + (msg ? '<div class="mp-msg">' + esc(msg) + '</div>' : '');
+  }
+  el.innerHTML = h + '</div>';
+}
+async function resetAll(){
+  if (!(me && me.isOwner)) return;
+  renderOwner('busy', 'Reading scores...');
+  try {
+    var snap = await fb.getDocs(fb.collection(db, 'quizzes', QUIZ_ID, 'players'));
+    var docs = snap.docs, done = 0;
+    for (var i = 0; i < docs.length; i += 400){
+      var chunk = docs.slice(i, i + 400);
+      var batch = fb.writeBatch(db);
+      chunk.forEach(function(d){ batch.delete(d.ref); });
+      await batch.commit();
+      done += chunk.length;
+      renderOwner('busy', 'Deleted ' + done + ' of ' + docs.length);
+    }
+    renderOwner('', 'Done. Deleted ' + docs.length + ' player document(s). Reload the page to play again.');
+  } catch (e){
+    renderOwner('', 'Reset failed: ' + dbMsg(e));
+  }
+}
+
+/* ---------- wiring ---------- */
+document.addEventListener('click', function(e){
+  var t = e.target && e.target.closest ? e.target.closest('[data-mp]') : null;
+  if (!t) return;
+  switch (t.getAttribute('data-mp')){
+    case 'signin':     doSignIn(); break;
+    case 'signout':    if (auth && !playing) fb.signOut(auth); break;
+    case 'boot':       boot(); break;
+    case 'recheck':    if (auth && auth.currentUser) onUser(auth.currentUser); else boot(); break;
+    case 'lb':         openLb('start'); break;
+    case 'lb-back':    stopBoard(); Q.show(lb.back); break;
+    case 'tab-this':   selectTab('this'); break;
+    case 'tab-others': selectTab('others'); break;
+    case 'quizlist':   showQuizList(); break;
+    case 'openquiz':   showBoard(t.getAttribute('data-id'), t.getAttribute('data-title'), true); break;
+    case 'reset':      renderOwner('confirm'); break;
+    case 'reset-no':   renderOwner(''); break;
+    case 'reset-yes':  resetAll(); break;
+    case 'retry-save': trySave(true); break;
+  }
+});
+window.addEventListener('online',  function(){ paintStatus(); if (pending && saveState === 'error' && auth && auth.currentUser) trySave(false); });
+window.addEventListener('offline', function(){ paintStatus(); });
+
+window.__requestStart = requestStart;
+window.__openLeaderboard = openLb;
+window.__onQuizFinished = function(res){
+  pending = res; saveState = 'saving'; renderSave();
+  trySave(false);
+};
+
+boot();
+})();
+</script>
+</body>
+</html>
